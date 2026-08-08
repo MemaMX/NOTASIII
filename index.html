@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Notas App</title>
+  <style>
+    :root[data-theme="dark"] {
+      --bg: #212121;
+      --surface: #2c2c2c;
+      --surface2: #333;
+      --border: #444;
+      --text: #e8e8e8;
+      --text-muted: #999;
+      --accent: rgb(27,129,112);
+      --accent-hover: rgb(24,94,82);
+      --scrollbar-thumb: #555;
+      --dot: #888;
+    }
+    :root[data-theme="light"] {
+      --bg: #e8e8e8;
+      --surface: #f5f5f5;
+      --surface2: #fff;
+      --border: #c1c2c5;
+      --text: #212121;
+      --text-muted: #666;
+      --accent: rgb(27,129,112);
+      --accent-hover: rgb(24,94,82);
+      --scrollbar-thumb: #c1c2c5;
+      --dot: #aaa;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .app-wrapper {
+      display: flex;
+      flex-direction: column;
+      width: 90vw;
+      min-width: 320px;
+      max-width: 900px;
+      margin: 0 auto;
+      resize: horizontal;
+      overflow: visible;
+      min-height: 100vh;
+      padding-bottom: 60px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 8px 10px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .topbar-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--accent);
+    }
+    .topbar-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; position: relative; }
+
+    .toggle-switch {
+      position: relative;
+      width: 70px;
+      height: 34px;
+      --light: #d8dbe0;
+      --dark: #28292c;
+    }
+    .switch-label {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background-color: var(--dark);
+      border-radius: 17px;
+      cursor: pointer;
+      border: 3px solid var(--dark);
+    }
+    .checkbox { position: absolute; display: none; }
+    .slider {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 17px;
+      transition: 0.3s;
+    }
+    .checkbox:checked ~ .slider { background-color: var(--light); }
+    .slider::before {
+      content: "";
+      position: absolute;
+      top: 4px; left: 4px;
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      box-shadow: inset 8px -3px 0px 0px var(--light);
+      background-color: var(--dark);
+      transition: 0.3s;
+    }
+    .checkbox:checked ~ .slider::before {
+      transform: translateX(34px);
+      background-color: var(--dark);
+      box-shadow: none;
+    }
+
+    .btn-add-dropdown,
+    .btn-new-page,
+    .accent-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      outline: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-add-dropdown,
+    .btn-new-page {
+      transition: rotate 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .btn-add-dropdown:hover,
+    .btn-new-page:hover { rotate: 90deg; }
+    .btn-add-dropdown svg,
+    .btn-new-page svg {
+      stroke: var(--text-muted);
+      fill: none;
+      transition: fill 0.3s, stroke 0.3s;
+    }
+    .btn-add-dropdown:hover svg,
+    .btn-new-page:hover svg { fill: var(--surface); stroke: var(--accent); }
+    .btn-add-dropdown:active svg,
+    .btn-new-page:active svg { stroke: var(--text); fill: var(--accent); }
+    .accent-btn {
+      color: var(--text-muted);
+      font-size: 20px;
+      padding: 6px;
+      border-radius: 10px;
+      transition: background 0.2s, color 0.2s, transform 0.2s;
+    }
+    .accent-btn:hover {
+      background: var(--surface);
+      color: var(--accent);
+      transform: scale(1.05);
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 8px;
+      flex-wrap: wrap;
+      background: var(--surface);
+      border-radius: 10px;
+      margin: 0 4px 14px;
+      border: 1px solid var(--border);
+    }
+    .toolbar button, .toolbar select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 4px 9px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      font-family: inherit;
+    }
+    .toolbar button:hover, .toolbar select:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .toolbar select { padding: 4px 6px; max-width: 110px; }
+    .toolbar input[type=number] {
+      width: 52px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 4px 6px;
+      font-size: 13px;
+    }
+    .toolbar-color-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 8px;
+      color: var(--text);
+      font-size: 13px;
+    }
+    .toolbar-color-wrap input[type=color],
+    .popover-color-row input[type=color],
+    .accent-popover input[type=color] {
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: transparent;
+      padding: 0;
+      cursor: pointer;
+    }
+    .toolbar-sep {
+      width: 1px;
+      height: 22px;
+      background: var(--border);
+      margin: 0 2px;
+    }
+
+    .dropdowns-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding: 0 4px;
+    }
+
+    .dropdown-wrap {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      position: relative;
+      animation: slideIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-18px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .dropdown-wrap.dragging {
+      opacity: 0.5;
+      outline: 2px dashed var(--accent);
+      border-radius: 12px;
+    }
+    .dropdown-wrap.drag-over {
+      outline: 2px solid var(--accent);
+      border-radius: 12px;
+    }
+
+    .dd-controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 14px;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .dd-drag {
+      cursor: grab;
+      color: var(--text-muted);
+      font-size: 15px;
+      line-height: 1;
+      user-select: none;
+      letter-spacing: -1px;
+      transition: color 0.2s, transform 0.2s;
+    }
+    .dd-drag:hover { color: var(--accent); }
+    .dd-drag:active { cursor: grabbing; transform: scale(1.2); }
+    .dd-del {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      padding: 2px 4px;
+      border-radius: 6px;
+      transition: color 0.2s, background 0.2s, transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .dd-del:hover { color: #e55; background: rgba(255,80,80,0.12); transform: scale(1.2); }
+    @keyframes ddSlideOut {
+      from { opacity: 1; transform: scale(1) translateY(0); max-height: 300px; }
+      to   { opacity: 0; transform: scale(0.9) translateY(-8px); max-height: 0; }
+    }
+    .dropdown-wrap.removing {
+      animation: ddSlideOut 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .dd-drop-indicator {
+      height: 3px;
+      background: var(--accent);
+      border-radius: 3px;
+      margin: -7px 0;
+      transition: opacity 0.15s;
+      pointer-events: none;
+    }
+    .checklist-overlay {
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      padding: 2px 0;
+    }
+    .checklist-overlay.active { display: flex; }
+    .cl-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 3px 2px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s;
+      animation: clItemIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    .cl-item:hover { background: rgba(128,128,128,0.1); }
+    .cl-item input[type=checkbox] {
+      accent-color: var(--accent);
+      width: 15px; height: 15px;
+      margin-top: 2px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .cl-item-text {
+      font-size: 15px;
+      font-family: 'Segoe UI', sans-serif;
+      line-height: 1.6;
+      color: var(--text);
+      flex: 1;
+      word-break: break-word;
+      transition: text-decoration 0.2s ease, opacity 0.2s ease, color 0.2s ease;
+    }
+    .cl-item.checked .cl-item-text {
+      text-decoration: line-through;
+      color: var(--text-muted);
+      opacity: 0.65;
+    }
+    @keyframes clItemIn {
+      from { opacity: 0; transform: translateX(-14px) scale(0.97); }
+      to   { opacity: 1; transform: translateX(0) scale(1); }
+    }
+    @keyframes clItemOut {
+      from { opacity: 1; transform: scale(1); }
+      to   { opacity: 0; transform: scale(0.95); }
+    }
+    .checklist-overlay.exiting .cl-item {
+      animation: clItemOut 0.15s ease forwards;
+    }
+    .toolbar button.active-tool {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .dropdown {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      min-height: 58px;
+      background-color: var(--surface);
+      position: relative;
+      flex: 1;
+      transition: border-color 0.2s;
+    }
+    .dropdown input.dd-state { position: absolute; display: none; }
+    .dd-body {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 0.35s cubic-bezier(0.4,0,0.2,1);
+    }
+    .dd-body-inner { overflow: hidden; }
+    .dropdown input.dd-state:checked ~ .dd-body { grid-template-rows: 1fr; }
+    .dd-list { padding: 8px 12px 12px; }
+
+    .dd-trigger {
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--text);
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 14px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--surface);
+      border-radius: 12px;
+      user-select: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0);
+      transition: color 0.3s, background 0.3s, box-shadow 0.3s ease;
+    }
+    .dd-trigger:hover { background: var(--surface2); }
+    .dropdown input.dd-state:checked ~ .dd-trigger { box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
+    .dd-arrow {
+      display: inline-block;
+      transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+      color: inherit;
+      opacity: 0.75;
+      font-size: 20px;
+      line-height: 1;
+      margin-right: 2px;
+      flex-shrink: 0;
+    }
+    .dropdown input.dd-state:checked ~ .dd-trigger .dd-arrow { transform: rotate(90deg); }
+    .dd-title {
+      flex: 1;
+      font-size: 15px;
+      outline: none;
+      background: transparent;
+      border: none;
+      color: inherit;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transition: color 0.3s, background 0.3s, padding 0.2s, border-radius 0.2s;
+    }
+    .dd-title:not([readonly]) {
+      cursor: text;
+      background: var(--surface2);
+      padding: 2px 6px;
+      border-radius: 6px;
+      white-space: normal;
+      overflow: visible;
+    }
+    .dd-color-btn {
+      border: none;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      padding: 4px;
+      border-radius: 8px;
+      transition: background 0.2s, transform 0.2s;
+      flex-shrink: 0;
+    }
+    .dd-color-btn:hover {
+      background: rgba(128,128,128,0.15);
+      transform: scale(1.05);
+    }
+
+    .note-area {
+      width: 100%;
+      min-height: 60px;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-size: 15px;
+      font-family: 'Segoe UI', sans-serif;
+      resize: none;
+      overflow: hidden;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      transition: background 0.25s;
+    }
+    .modal-overlay.active {
+      background: rgba(0,0,0,0.55);
+      pointer-events: auto;
+    }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 28px 22px;
+      min-width: 280px;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transform: scale(0.85) translateY(20px);
+      opacity: 0;
+      transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s;
+    }
+    .modal-overlay.active .modal {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+    }
+    .modal h3 { font-size: 1rem; color: var(--text); }
+    .modal label { font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .modal input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; }
+    .modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+    .modal-btns button {
+      padding: 7px 18px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .modal-btns button.primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .modal-btns button:hover { opacity: 0.85; transform: scale(1.04); }
+    .modal-btns button:active { transform: scale(0.97); }
+
+    .pages-nav {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      flex-wrap: wrap;
+    }
+    .page-tab {
+      padding: 5px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      max-width: 180px;
+    }
+    .page-tab.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .page-tab:hover:not(.active) { border-color: var(--accent); color: var(--accent); transform: scale(1.05); }
+    .page-tab input.page-tab-input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: inherit;
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: inherit;
+      width: 100%;
+      min-width: 30px;
+      cursor: text;
+    }
+    .page-tab-del {
+      background: none;
+      border: none;
+      color: inherit;
+      cursor: pointer;
+      font-size: 13px;
+      line-height: 1;
+      padding: 0 0 0 2px;
+      opacity: 0.6;
+      border-radius: 50%;
+      transition: opacity 0.2s, background 0.2s;
+      flex-shrink: 0;
+    }
+    .page-tab-del:hover { opacity: 1; background: rgba(255,255,255,0.2); }
+    @keyframes tabSlideIn {
+      from { opacity: 0; transform: translateX(20px) scale(0.9); }
+      to   { opacity: 1; transform: translateX(0) scale(1); }
+    }
+    .page-tab.new-tab { animation: tabSlideIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both; }
+    @keyframes tabFadeOut {
+      from { opacity: 1; transform: scale(1); }
+      to   { opacity: 0; transform: scale(0.8); }
+    }
+    .page-tab.removing { animation: tabFadeOut 0.25s cubic-bezier(0.34,1.56,0.64,1) both; }
+
+    .floating-popover {
+      position: fixed;
+      z-index: 2000;
+      min-width: 220px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.28);
+      opacity: 0;
+      transform: scale(0.96);
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    .floating-popover.open {
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
+    }
+    .floating-popover h4 {
+      font-size: 14px;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+    .popover-color-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+      color: var(--text);
+      font-size: 13px;
+    }
+    .popover-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .popover-actions button {
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, transform 0.2s;
+    }
+    .popover-actions button:hover { transform: scale(1.03); }
+    .popover-actions .primary-btn {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .accent-popover { min-width: 250px; }
+    .accent-popover .popover-actions { justify-content: space-between; }
+
+    ::-webkit-scrollbar { width: 7px; height: 7px; border-radius: 999px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 999px; }
+
+    .no-dropdowns-msg {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+      padding: 40px 0 20px;
+    }
+
+    #dragGhost {
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.85;
+      border-radius: 12px;
+      background: var(--surface2);
+      border: 2px solid var(--accent);
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+      transition: transform 0.12s cubic-bezier(0.34,1.56,0.64,1);
+      display: none;
+      white-space: nowrap;
+      max-width: 260px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  </style>
+</head>
+<body>
+<div id="dragGhost"></div>
+
+<div class="modal-overlay" id="newPageModal">
+  <div class="modal">
+    <h3>Nueva Hoja</h3>
+    <label>
+      <input type="checkbox" id="keepDropdownsCheck" />
+      Mantener dropdowns (boxes vacios)
+    </label>
+    <div class="modal-btns">
+      <button onclick="closeNewPageModal()">Cancelar</button>
+      <button class="primary" onclick="confirmNewPage()">Crear</button>
+    </div>
+  </div>
+</div>
+
+<div class="app-wrapper" id="appWrapper">
+  <div class="topbar">
+    <span class="topbar-title">Notas</span>
+    <div class="topbar-right">
+      <button class="accent-btn" id="accentBtn" title="Colores de interfaz" type="button"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="8" cy="10" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="10" r="1.5" fill="currentColor" stroke="none"/><path d="M12 19c-1.5 0-4-1.5-4-4 0-1 .5-2 2-2h4c1.5 0 2 1 2 2 0 2.5-2.5 4-4 4z"/></svg></button>
+      <div class="toggle-switch" title="Modo claro/oscuro">
+        <label class="switch-label">
+          <input type="checkbox" class="checkbox" id="themeToggle" />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <button class="btn-new-page" title="Nueva hoja" onclick="openNewPageModal()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="38px" height="38px" viewBox="0 0 24 24" stroke-width="1.5">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="12" y1="11" x2="12" y2="17"></line>
+          <line x1="9" y1="14" x2="15" y2="14"></line>
+        </svg>
+      </button>
+      <button class="btn-add-dropdown" title="Agregar dropdown" onclick="addDropdown()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="38px" height="38px" viewBox="0 0 24 24" stroke-width="1.5">
+          <path d="M12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22Z"></path>
+          <path d="M8 12H16"></path>
+          <path d="M12 16V8"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="pages-nav" id="pagesNav"></div>
+
+  <div class="toolbar" id="toolbar">
+    <button onclick="fmt('bold')" title="Negrita"><b>B</b></button>
+    <button onclick="fmt('italic')" title="Italica"><i>I</i></button>
+    <button onclick="fmt('underline')" title="Subrayado"><u>U</u></button>
+    <div class="toolbar-sep"></div>
+    <select id="fontFamily" onchange="applyFont()" title="Tipo de fuente">
+      <option value="Segoe UI">Segoe UI</option>
+      <option value="Georgia">Georgia</option>
+      <option value="Courier New">Courier New</option>
+      <option value="Arial">Arial</option>
+      <option value="Times New Roman">Times New Roman</option>
+      <option value="Verdana">Verdana</option>
+      <option value="monospace">Monospace</option>
+    </select>
+    <input type="number" id="fontSize" min="8" max="72" value="15" title="Tamano de fuente" onchange="applyFontSize()" style="width:52px" />
+    <div class="toolbar-sep"></div>
+    <label class="toolbar-color-wrap" title="Color de texto">
+      <span>A</span>
+      <input type="color" id="textColorPicker" value="#000000" onchange="applyTextColor(this.value)" />
+    </label>
+    <div class="toolbar-sep"></div>
+    <button id="btnChecklist" onclick="toggleChecklistMode()" title="Modo checklist">Checklist</button>
+    <button id="btnChecklistDone" onclick="saveChecklistMode()" title="Guardar checklist" style="display:none">Listo</button>
+  </div>
+
+  <div class="dropdowns-list" id="dropdownsList">
+    <p class="no-dropdowns-msg" id="emptyMsg">No hay dropdowns. Presiona <b>+</b> para agregar uno.</p>
+  </div>
+</div>
+
+<script>
+let pages = [];
+let currentPage = 0;
+let activeNoteEl = null;
+let dropdownColorPopover = null;
+let accentPopover = null;
+let globalPopoverCleanup = null;
+let checklistActive = false;
+const ghost = document.getElementById('dragGhost');
+const DEFAULT_ACCENT = 'rgb(27,129,112)';
+let dragState = null;
+let dropIndicator = null;
+
+function init() {
+  const saved = localStorage.getItem('notasapp_v2');
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      pages = data.pages || [];
+      currentPage = data.currentPage || 0;
+      if (currentPage >= pages.length) currentPage = 0;
+    } catch(e) {
+      pages = [];
+    }
+  }
+  if (pages.length === 0) {
+    pages.push({ id: uid(), name: 'Hoja 1', dropdowns: [] });
+    currentPage = 0;
+  }
+  normalizeDropdownData();
+  const savedTheme = localStorage.getItem('notasapp_theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  document.getElementById('themeToggle').checked = savedTheme === 'light';
+  applySavedAccent(savedTheme);
+  setupAccentButton();
+  renderAll();
+}
+
+function save() {
+  syncCurrentPageFromDOM();
+  localStorage.setItem('notasapp_v2', JSON.stringify({ pages, currentPage }));
+}
+
+function syncCurrentPageFromDOM() {
+  const page = pages[currentPage];
+  if (!page) return;
+  document.querySelectorAll('.dropdown-wrap:not(.removing)').forEach((wrap, i) => {
+    if (!page.dropdowns[i]) return;
+    const titleEl = wrap.querySelector('.dd-title');
+    const noteEl = wrap.querySelector('.note-area');
+    const stateEl = wrap.querySelector('.dd-state');
+    if (titleEl) page.dropdowns[i].title = titleEl.value;
+    if (noteEl) page.dropdowns[i].content = noteEl.innerHTML;
+    if (stateEl) page.dropdowns[i].open = stateEl.checked;
+  });
+}
+
+function renderAll() {
+  closeDropdownColorPopover(true);
+  renderPagesNav();
+  renderDropdowns();
+}
+
+function renderPagesNav() {
+  const nav = document.getElementById('pagesNav');
+  nav.innerHTML = '';
+  pages.forEach((p, i) => {
+    const tab = document.createElement('div');
+    tab.className = 'page-tab' + (i === currentPage ? ' active' : '');
+    tab.title = 'Doble clic para renombrar';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'page-tab-name';
+    nameSpan.textContent = p.name;
+    nameSpan.style.overflow = 'hidden';
+    nameSpan.style.textOverflow = 'ellipsis';
+    nameSpan.style.whiteSpace = 'nowrap';
+    tab.appendChild(nameSpan);
+
+    if (pages.length > 1) {
+      const delBtn = document.createElement('button');
+      delBtn.className = 'page-tab-del';
+      delBtn.title = 'Eliminar hoja';
+      delBtn.textContent = '×';
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deletePage(i, tab);
+      });
+      tab.appendChild(delBtn);
+    }
+
+    tab.addEventListener('click', (e) => {
+      if (e.detail === 1) tab._clickTimer = setTimeout(() => switchPage(i), 180);
+    });
+    tab.addEventListener('dblclick', () => {
+      clearTimeout(tab._clickTimer);
+      startRenameTab(tab, nameSpan, i);
+    });
+    nav.appendChild(tab);
+  });
+}
+
+function startRenameTab(tab, nameSpan, pageIndex) {
+  if (tab.querySelector('input')) return;
+  const input = document.createElement('input');
+  input.className = 'page-tab-input';
+  input.value = pages[pageIndex].name;
+  input.style.width = Math.max(input.value.length * 8, 50) + 'px';
+  nameSpan.replaceWith(input);
+  input.focus();
+  input.select();
+
+  const commit = () => {
+    const val = input.value.trim() || pages[pageIndex].name;
+    pages[pageIndex].name = val;
+    const newSpan = document.createElement('span');
+    newSpan.className = 'page-tab-name';
+    newSpan.textContent = val;
+    newSpan.style.overflow = 'hidden';
+    newSpan.style.textOverflow = 'ellipsis';
+    newSpan.style.whiteSpace = 'nowrap';
+    input.replaceWith(newSpan);
+    save();
+  };
+  input.addEventListener('blur', commit, { once: true });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') input.blur();
+    if (e.key === 'Escape') {
+      input.value = pages[pageIndex].name;
+      input.blur();
+    }
+    setTimeout(() => { input.style.width = Math.max(input.value.length * 8, 50) + 'px'; }, 0);
+  });
+}
+
+function renderDropdowns() {
+  const list = document.getElementById('dropdownsList');
+  list.innerHTML = '';
+  const page = pages[currentPage];
+  if (!page || page.dropdowns.length === 0) {
+    list.innerHTML = '<p class="no-dropdowns-msg" id="emptyMsg">No hay dropdowns. Presiona <b>+</b> para agregar uno.</p>';
+    return;
+  }
+  page.dropdowns.forEach((dd, i) => {
+    if (!Object.prototype.hasOwnProperty.call(dd, 'headerBg')) dd.headerBg = undefined;
+    if (!Object.prototype.hasOwnProperty.call(dd, 'headerColor')) dd.headerColor = undefined;
+    list.appendChild(buildDropdownEl(dd, i));
+  });
+}
+
+function buildDropdownEl(dd, index) {
+  const wrap = document.createElement('div');
+  wrap.className = 'dropdown-wrap';
+  wrap.dataset.index = index;
+
+  const controls = document.createElement('div');
+  controls.className = 'dd-controls';
+
+  const dragHandle = document.createElement('div');
+  dragHandle.className = 'dd-drag';
+  dragHandle.title = 'Arrastrar para ordenar';
+  dragHandle.innerHTML = '&#8942;&#8942;';
+
+  const delBtn = document.createElement('button');
+  delBtn.className = 'dd-del';
+  delBtn.title = 'Eliminar dropdown';
+  delBtn.textContent = '×';
+  delBtn.addEventListener('click', () => deleteDropdown(index, wrap));
+
+  controls.appendChild(dragHandle);
+  controls.appendChild(delBtn);
+  setupDrag(wrap, dragHandle);
+
+  const dropdown = document.createElement('div');
+  dropdown.className = 'dropdown';
+
+  const stateInput = document.createElement('input');
+  stateInput.type = 'checkbox';
+  stateInput.className = 'dd-state';
+  stateInput.id = 'state-' + dd.id;
+  stateInput.checked = dd.open || false;
+  stateInput.addEventListener('change', () => {
+    dd.open = stateInput.checked;
+    save();
+  });
+
+  const trigger = document.createElement('div');
+  trigger.className = 'dd-trigger';
+  if (dd.headerBg) trigger.style.background = dd.headerBg;
+  if (dd.headerColor) trigger.style.color = dd.headerColor;
+
+  const arrow = document.createElement('span');
+  arrow.className = 'dd-arrow';
+  arrow.textContent = '›';
+
+  const titleInput = document.createElement('input');
+  titleInput.className = 'dd-title';
+  titleInput.type = 'text';
+  titleInput.value = dd.title || 'Nuevo dropdown';
+  titleInput.readOnly = true;
+  titleInput.spellcheck = false;
+  if (dd.headerColor) titleInput.style.color = dd.headerColor;
+  titleInput.addEventListener('change', () => { dd.title = titleInput.value; save(); });
+  titleInput.addEventListener('blur', () => { dd.title = titleInput.value; titleInput.readOnly = true; save(); });
+  titleInput.addEventListener('click', (e) => {
+    if (!titleInput.readOnly) e.stopPropagation();
+  });
+  titleInput.addEventListener('dblclick', (e) => {
+    e.stopPropagation();
+    titleInput.readOnly = false;
+    titleInput.focus();
+    titleInput.select();
+  });
+
+  const colorBtn = document.createElement('button');
+  colorBtn.type = 'button';
+  colorBtn.className = 'dd-color-btn';
+  colorBtn.title = 'Colores del encabezado';
+  colorBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 19.5A2.5 2.5 0 0 0 4.5 22c.83 0 1.5-.67 1.5-1.5v-1A1.5 1.5 0 0 1 7.5 18H19a2 2 0 0 0 2-2 9 9 0 0 0-9-9 9 9 0 0 0-9 9 2.5 2.5 0 0 0-.5 1.5z"/><circle cx="7.5" cy="12.5" r="1" fill="currentColor" stroke="none"/><circle cx="10.5" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="13.5" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="16.5" cy="12.5" r="1" fill="currentColor" stroke="none"/></svg>';
+  colorBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openDropdownColorPopover(dd, colorBtn, trigger, titleInput);
+  });
+
+  trigger.addEventListener('click', (e) => {
+    if (e.target.closest('.dd-color-btn')) return;
+    if (!titleInput.readOnly) return;
+    stateInput.checked = !stateInput.checked;
+    dd.open = stateInput.checked;
+    save();
+  });
+
+  trigger.appendChild(arrow);
+  trigger.appendChild(titleInput);
+  trigger.appendChild(colorBtn);
+
+  const ddBody = document.createElement('div');
+  ddBody.className = 'dd-body';
+  const ddBodyInner = document.createElement('div');
+  ddBodyInner.className = 'dd-body-inner';
+  const ddList = document.createElement('div');
+  ddList.className = 'dd-list';
+
+  const noteArea = document.createElement('div');
+  noteArea.className = 'note-area';
+  noteArea.contentEditable = 'true';
+  noteArea.spellcheck = true;
+  noteArea.innerHTML = dd.content || '';
+  noteArea.addEventListener('focus', () => { activeNoteEl = noteArea; });
+  noteArea.addEventListener('blur', () => { dd.content = noteArea.innerHTML; save(); });
+  noteArea.addEventListener('input', () => { dd.content = noteArea.innerHTML; });
+  noteArea.addEventListener('keydown', (e) => handlePipeRule(e, noteArea, dd));
+
+  const clOverlay = document.createElement('div');
+  clOverlay.className = 'checklist-overlay';
+
+  ddList.appendChild(noteArea);
+  ddList.appendChild(clOverlay);
+  ddBodyInner.appendChild(ddList);
+  ddBody.appendChild(ddBodyInner);
+
+  dropdown.appendChild(stateInput);
+  dropdown.appendChild(trigger);
+  dropdown.appendChild(ddBody);
+
+  function syncArrow() {
+    arrow.style.transform = stateInput.checked ? 'rotate(90deg)' : '';
+  }
+  stateInput.addEventListener('change', syncArrow);
+  syncArrow();
+
+  wrap.appendChild(controls);
+  wrap.appendChild(dropdown);
+  return wrap;
+}
+
+function handlePipeRule(e, el, dd) {
+  if (e.key === ' ') {
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    const node = range.startContainer;
+    if (node.nodeType !== Node.TEXT_NODE) return;
+    const text = node.textContent;
+    const cursorPos = range.startOffset;
+    const textBefore = text.substring(0, cursorPos);
+    const match = textBefore.match(/(\d+)$/);
+    if (match) {
+      e.preventDefault();
+      const digits = match[1];
+      const beforeDigits = textBefore.slice(0, textBefore.length - digits.length);
+      const afterCursor = text.substring(cursorPos);
+      node.textContent = beforeDigits + digits + ' | ' + afterCursor;
+      const newPos = beforeDigits.length + digits.length + 3;
+      const newRange = document.createRange();
+      newRange.setStart(node, newPos);
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      dd.content = el.innerHTML;
+    }
+  }
+}
+
+function fmt(cmd) {
+  if (activeNoteEl) activeNoteEl.focus();
+  document.execCommand(cmd, false, null);
+  if (activeNoteEl) save();
+}
+
+function applyFont() {
+  if (activeNoteEl) activeNoteEl.focus();
+  const font = document.getElementById('fontFamily').value;
+  document.execCommand('fontName', false, font);
+}
+
+function applyFontSize() {
+  if (activeNoteEl) activeNoteEl.focus();
+  const size = document.getElementById('fontSize').value;
+  document.execCommand('fontSize', false, '7');
+  const fontEls = document.querySelectorAll('font[size="7"]');
+  fontEls.forEach(f => {
+    f.removeAttribute('size');
+    f.style.fontSize = size + 'px';
+  });
+}
+
+function applyTextColor(value) {
+  if (!activeNoteEl) return;
+  activeNoteEl.focus();
+  document.execCommand('foreColor', false, value);
+  save();
+}
+
+function addDropdown() {
+  const page = pages[currentPage];
+  page.dropdowns.push({ id: uid(), title: 'Nuevo dropdown', content: '', open: true, headerBg: undefined, headerColor: undefined });
+  save();
+  renderDropdowns();
+  const wraps = document.querySelectorAll('.dropdown-wrap');
+  const last = wraps[wraps.length - 1];
+  if (last) {
+    const titleInput = last.querySelector('.dd-title');
+    if (titleInput) {
+      titleInput.readOnly = false;
+      titleInput.focus();
+      titleInput.select();
+    }
+  }
+}
+
+function renameDropdown(index) {
+  const wraps = document.querySelectorAll('.dropdown-wrap');
+  const wrap = wraps[index];
+  if (!wrap) return;
+  const titleInput = wrap.querySelector('.dd-title');
+  if (!titleInput) return;
+  titleInput.readOnly = false;
+  titleInput.focus();
+  titleInput.select();
+}
+
+function deletePage(i, tabEl) {
+  if (pages.length <= 1) return;
+  tabEl.classList.add('removing');
+  setTimeout(() => {
+    syncCurrentPageFromDOM();
+    pages.splice(i, 1);
+    if (currentPage >= pages.length) currentPage = pages.length - 1;
+    save();
+    renderAll();
+  }, 260);
+}
+
+function deleteDropdown(index, wrapEl) {
+  wrapEl.classList.add('removing');
+  setTimeout(() => {
+    syncCurrentPageFromDOM();
+    const page = pages[currentPage];
+    page.dropdowns.splice(index, 1);
+    save();
+    renderDropdowns();
+  }, 320);
+}
+
+function setupDrag(wrap, handle) {
+  handle.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    handle.setPointerCapture(e.pointerId);
+
+    const titleEl = wrap.querySelector('.dd-title');
+    const title = titleEl ? titleEl.value : 'Dropdown';
+
+    ghost.textContent = title;
+    ghost.style.display = 'block';
+    ghost.style.left = (e.clientX + 12) + 'px';
+    ghost.style.top = (e.clientY - 16) + 'px';
+
+    const list = document.getElementById('dropdownsList');
+    const allWraps = Array.from(list.querySelectorAll('.dropdown-wrap'));
+    const srcIndex = allWraps.indexOf(wrap);
+    dragState = { srcIndex, srcWrap: wrap, dropTarget: null };
+    wrap.classList.add('dragging');
+
+    dropIndicator = document.createElement('div');
+    dropIndicator.id = 'dropIndicator';
+    dropIndicator.className = 'dd-drop-indicator';
+
+    handle.addEventListener('pointermove', onPointerMove);
+    handle.addEventListener('pointerup', onPointerUp, { once: true });
+    handle.addEventListener('pointercancel', onPointerUp, { once: true });
+  });
+
+  function getInsertTarget(clientY) {
+    const list = document.getElementById('dropdownsList');
+    const wraps = Array.from(list.querySelectorAll('.dropdown-wrap'));
+    for (const w of wraps) {
+      if (w === dragState.srcWrap) continue;
+      const rect = w.getBoundingClientRect();
+      if (clientY < rect.top + rect.height / 2) return { wrap: w, position: 'before' };
+      if (clientY < rect.bottom) return { wrap: w, position: 'after' };
+    }
+    return null;
+  }
+
+  function onPointerMove(e) {
+    if (!dragState) return;
+    ghost.style.left = (e.clientX + 12) + 'px';
+    ghost.style.top = (e.clientY - 16) + 'px';
+
+    if (dropIndicator.parentNode) dropIndicator.parentNode.removeChild(dropIndicator);
+
+    const list = document.getElementById('dropdownsList');
+    const target = getInsertTarget(e.clientY);
+    dragState.dropTarget = target;
+    if (target) {
+      if (target.position === 'before') list.insertBefore(dropIndicator, target.wrap);
+      else target.wrap.after(dropIndicator);
+    } else {
+      list.appendChild(dropIndicator);
+    }
+  }
+
+  function onPointerUp() {
+    handle.removeEventListener('pointermove', onPointerMove);
+    ghost.style.display = 'none';
+
+    if (dragState) {
+      const list = document.getElementById('dropdownsList');
+      if (dropIndicator && dropIndicator.parentNode) dropIndicator.parentNode.removeChild(dropIndicator);
+      const wraps = Array.from(list.querySelectorAll('.dropdown-wrap'));
+      const target = dragState.dropTarget || null;
+      const srcIndex = wraps.indexOf(dragState.srcWrap);
+
+      if (srcIndex !== -1) {
+        let insertAt;
+        if (!target) insertAt = wraps.length;
+        else {
+          const targetIdx = wraps.indexOf(target.wrap);
+          insertAt = target.position === 'before' ? targetIdx : targetIdx + 1;
+        }
+        const adjustedTarget = insertAt > srcIndex ? insertAt - 1 : insertAt;
+        if (adjustedTarget !== srcIndex) {
+          syncCurrentPageFromDOM();
+          const page = pages[currentPage];
+          const moved = page.dropdowns.splice(srcIndex, 1)[0];
+          page.dropdowns.splice(adjustedTarget, 0, moved);
+          save();
+          renderDropdowns();
+        }
+      }
+    } else if (dropIndicator && dropIndicator.parentNode) {
+      dropIndicator.parentNode.removeChild(dropIndicator);
+    }
+
+    document.querySelectorAll('.dropdown-wrap').forEach(w => {
+      w.classList.remove('drag-over');
+      w.classList.remove('dragging');
+    });
+    dragState = null;
+    dropIndicator = null;
+  }
+}
+
+function normalizeDropdownData() {
+  pages.forEach(page => {
+    page.dropdowns = (page.dropdowns || []).map(dd => ({
+      ...dd,
+      headerBg: Object.prototype.hasOwnProperty.call(dd, 'headerBg') ? dd.headerBg : undefined,
+      headerColor: Object.prototype.hasOwnProperty.call(dd, 'headerColor') ? dd.headerColor : undefined
+    }));
+  });
+}
+
+function setPopoverPosition(popover, anchorEl) {
+  const rect = anchorEl.getBoundingClientRect();
+  const top = rect.bottom + 8;
+  let left = rect.left;
+  const maxLeft = window.innerWidth - popover.offsetWidth - 12;
+  if (left > maxLeft) left = Math.max(12, maxLeft);
+  popover.style.top = top + 'px';
+  popover.style.left = Math.max(12, left) + 'px';
+}
+
+function registerPopoverCleanup(cleanup) {
+  if (globalPopoverCleanup) globalPopoverCleanup.close(true);
+  globalPopoverCleanup = cleanup;
+  setTimeout(() => {
+    document.addEventListener('pointerdown', cleanup.onOutsidePointerDown);
+    window.addEventListener('resize', cleanup.onResize, { passive: true });
+    window.addEventListener('scroll', cleanup.onResize, { passive: true });
+  }, 0);
+}
+
+function clearGlobalPopoverCleanup(cleanup) {
+  const active = cleanup || globalPopoverCleanup;
+  if (!active) return;
+  document.removeEventListener('pointerdown', active.onOutsidePointerDown);
+  window.removeEventListener('resize', active.onResize);
+  window.removeEventListener('scroll', active.onResize);
+  if (!cleanup || globalPopoverCleanup === cleanup) globalPopoverCleanup = null;
+}
+
+function openDropdownColorPopover(dd, buttonEl, triggerEl, titleInput) {
+  closeAccentPopover(true);
+  closeDropdownColorPopover(true);
+  const pop = document.createElement('div');
+  pop.className = 'floating-popover';
+  pop.innerHTML = `
+    <h4>Colores del dropdown</h4>
+    <label class="popover-color-row"><span>Fondo</span><input type="color" value="${toColorInputValue(dd.headerBg, '#2c2c2c')}" data-role="bg"></label>
+    <label class="popover-color-row"><span>Texto</span><input type="color" value="${toColorInputValue(dd.headerColor, '#e8e8e8')}" data-role="color"></label>
+    <div class="popover-actions">
+      <button type="button" data-action="reset">Restablecer</button>
+      <button type="button" data-action="cancel">Cancelar</button>
+      <button type="button" class="primary-btn" data-action="ok">OK</button>
+    </div>
+  `;
+  document.body.appendChild(pop);
+  dropdownColorPopover = pop;
+  setPopoverPosition(pop, buttonEl);
+  requestAnimationFrame(() => pop.classList.add('open'));
+
+  const cleanup = {
+    onOutsidePointerDown: (event) => {
+      if (!pop.contains(event.target) && !buttonEl.contains(event.target)) closeDropdownColorPopover();
+    },
+    onResize: () => {
+      if (dropdownColorPopover === pop) setPopoverPosition(pop, buttonEl);
+    },
+    close: closeDropdownColorPopover
+  };
+  registerPopoverCleanup(cleanup);
+  pop._cleanup = cleanup;
+
+  pop.querySelector('[data-action="reset"]').addEventListener('click', () => {
+    dd.headerBg = undefined;
+    dd.headerColor = undefined;
+    triggerEl.style.background = '';
+    triggerEl.style.color = '';
+    titleInput.style.color = '';
+    save();
+    closeDropdownColorPopover();
+  });
+  pop.querySelector('[data-action="cancel"]').addEventListener('click', () => closeDropdownColorPopover());
+  pop.querySelector('[data-action="ok"]').addEventListener('click', () => {
+    const bg = pop.querySelector('[data-role="bg"]').value;
+    const color = pop.querySelector('[data-role="color"]').value;
+    dd.headerBg = bg;
+    dd.headerColor = color;
+    triggerEl.style.background = bg;
+    triggerEl.style.color = color;
+    titleInput.style.color = color;
+    save();
+    closeDropdownColorPopover();
+  });
+}
+
+function closeDropdownColorPopover(immediate = false) {
+  if (!dropdownColorPopover) return;
+  const pop = dropdownColorPopover;
+  dropdownColorPopover = null;
+  clearGlobalPopoverCleanup(pop._cleanup);
+  const remove = () => { if (pop.parentNode) pop.parentNode.removeChild(pop); };
+  if (immediate) return remove();
+  pop.classList.remove('open');
+  setTimeout(remove, 200);
+}
+
+function toColorInputValue(color, fallback) {
+  if (!color) return fallback;
+  if (color.startsWith('#')) return color;
+  const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+  if (!match) return fallback;
+  return '#' + match.slice(1, 4).map(v => Number(v).toString(16).padStart(2, '0')).join('');
+}
+
+function getAccentKey(theme) {
+  return theme === 'light' ? 'notasapp_accent_light' : 'notasapp_accent_dark';
+}
+
+function applySavedAccent(theme = document.documentElement.getAttribute('data-theme') || 'dark') {
+  const accent = localStorage.getItem(getAccentKey(theme)) || DEFAULT_ACCENT;
+  document.documentElement.style.setProperty('--accent', accent);
+}
+
+function setupAccentButton() {
+  const btn = document.getElementById('accentBtn');
+  if (!btn || btn._bound) return;
+  btn._bound = true;
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (accentPopover) closeAccentPopover();
+    else openAccentPopover(btn);
+  });
+}
+
+function openAccentPopover(buttonEl) {
+  closeDropdownColorPopover(true);
+  closeAccentPopover(true);
+  const darkValue = toColorInputValue(localStorage.getItem('notasapp_accent_dark') || DEFAULT_ACCENT, '#1b8170');
+  const lightValue = toColorInputValue(localStorage.getItem('notasapp_accent_light') || DEFAULT_ACCENT, '#1b8170');
+  const pop = document.createElement('div');
+  pop.className = 'floating-popover accent-popover';
+  pop.innerHTML = `
+    <h4>Colores de interfaz</h4>
+    <label class="popover-color-row"><span>Accent oscuro</span><input type="color" value="${darkValue}" data-role="dark"></label>
+    <label class="popover-color-row"><span>Accent claro</span><input type="color" value="${lightValue}" data-role="light"></label>
+    <div class="popover-actions">
+      <button type="button" data-action="reset">Restablecer colores</button>
+      <button type="button" data-action="close">Cerrar</button>
+    </div>
+  `;
+  document.body.appendChild(pop);
+  accentPopover = pop;
+  setPopoverPosition(pop, buttonEl);
+  requestAnimationFrame(() => pop.classList.add('open'));
+
+  const cleanup = {
+    onOutsidePointerDown: (event) => {
+      if (!pop.contains(event.target) && !buttonEl.contains(event.target)) closeAccentPopover();
+    },
+    onResize: () => {
+      if (accentPopover === pop) setPopoverPosition(pop, buttonEl);
+    },
+    close: closeAccentPopover
+  };
+  registerPopoverCleanup(cleanup);
+  pop._cleanup = cleanup;
+
+  const darkInput = pop.querySelector('[data-role="dark"]');
+  const lightInput = pop.querySelector('[data-role="light"]');
+  const applyFromInputs = () => {
+    localStorage.setItem('notasapp_accent_dark', darkInput.value);
+    localStorage.setItem('notasapp_accent_light', lightInput.value);
+    applySavedAccent();
+  };
+  darkInput.addEventListener('input', applyFromInputs);
+  lightInput.addEventListener('input', applyFromInputs);
+  pop.querySelector('[data-action="reset"]').addEventListener('click', () => {
+    darkInput.value = '#1b8170';
+    lightInput.value = '#1b8170';
+    applyFromInputs();
+  });
+  pop.querySelector('[data-action="close"]').addEventListener('click', () => closeAccentPopover());
+}
+
+function closeAccentPopover(immediate = false) {
+  if (!accentPopover) return;
+  const pop = accentPopover;
+  accentPopover = null;
+  clearGlobalPopoverCleanup(pop._cleanup);
+  const remove = () => { if (pop.parentNode) pop.parentNode.removeChild(pop); };
+  if (immediate) return remove();
+  pop.classList.remove('open');
+  setTimeout(remove, 200);
+}
+
+document.getElementById('themeToggle').addEventListener('change', function() {
+  const theme = this.checked ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('notasapp_theme', theme);
+  applySavedAccent(theme);
+});
+
+function openNewPageModal() {
+  document.getElementById('newPageModal').classList.add('active');
+}
+function closeNewPageModal() {
+  const overlay = document.getElementById('newPageModal');
+  overlay.classList.remove('active');
+  document.getElementById('keepDropdownsCheck').checked = false;
+}
+function confirmNewPage() {
+  const keep = document.getElementById('keepDropdownsCheck').checked;
+  const page = pages[currentPage];
+  const newPage = {
+    id: uid(),
+    name: 'Hoja ' + (pages.length + 1),
+    dropdowns: keep
+      ? page.dropdowns.map(dd => ({ id: uid(), title: dd.title, content: '', open: dd.open, headerBg: dd.headerBg, headerColor: dd.headerColor }))
+      : []
+  };
+  pages.push(newPage);
+  currentPage = pages.length - 1;
+  closeNewPageModal();
+  save();
+  renderAll();
+  const tabs = document.querySelectorAll('.page-tab');
+  const newTab = tabs[tabs.length - 1];
+  if (newTab) newTab.classList.add('new-tab');
+}
+
+function switchPage(i) {
+  if (i === currentPage) return;
+  const list = document.getElementById('dropdownsList');
+  list.style.transition = 'opacity 0.15s';
+  list.style.opacity = '0';
+  setTimeout(() => {
+    syncCurrentPageFromDOM();
+    currentPage = i;
+    save();
+    renderAll();
+    list.style.opacity = '1';
+  }, 150);
+}
+
+function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
+
+function toggleChecklistMode() {
+  if (!activeNoteEl) {
+    const first = document.querySelector('.note-area');
+    if (first) {
+      activeNoteEl = first;
+      first.focus();
+    } else {
+      return;
+    }
+  }
+  if (checklistActive) {
+    saveChecklistMode();
+    return;
+  }
+  checklistActive = true;
+  document.getElementById('btnChecklist').classList.add('active-tool');
+  document.getElementById('btnChecklistDone').style.display = '';
+
+  const noteArea = activeNoteEl;
+  noteArea.style.display = 'none';
+
+  const overlay = noteArea.nextElementSibling;
+  if (!overlay || !overlay.classList.contains('checklist-overlay')) return;
+  overlay.innerHTML = '';
+  overlay.classList.add('active');
+
+  const html = noteArea.innerHTML;
+  const lines = htmlToLines(html);
+
+  lines.forEach((line, idx) => {
+    const item = document.createElement('div');
+    item.className = 'cl-item' + (line.checked ? ' checked' : '');
+    item.style.animationDelay = (idx * 40) + 'ms';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = line.checked;
+
+    const textEl = document.createElement('span');
+    textEl.className = 'cl-item-text';
+    textEl.textContent = line.text;
+
+    item.appendChild(cb);
+    item.appendChild(textEl);
+
+    const toggle = () => {
+      item.classList.toggle('checked');
+      cb.checked = item.classList.contains('checked');
+    };
+    item.addEventListener('click', (e) => {
+      if (e.target === cb) return;
+      toggle();
+    });
+    cb.addEventListener('change', () => {
+      if (cb.checked) item.classList.add('checked');
+      else item.classList.remove('checked');
+    });
+
+    overlay.appendChild(item);
+  });
+}
+
+function saveChecklistMode() {
+  if (!checklistActive) return;
+
+  const noteArea = activeNoteEl;
+  if (!noteArea) return;
+  const overlay = noteArea.nextElementSibling;
+  if (!overlay || !overlay.classList.contains('checklist-overlay')) return;
+
+  overlay.classList.add('exiting');
+  setTimeout(() => {
+    checklistActive = false;
+    document.getElementById('btnChecklist').classList.remove('active-tool');
+    document.getElementById('btnChecklistDone').style.display = 'none';
+
+    const items = overlay.querySelectorAll('.cl-item');
+    const lines = Array.from(items).map(item => {
+      const text = item.querySelector('.cl-item-text').textContent;
+      const checked = item.classList.contains('checked');
+      return checked ? '<s>' + escapeHtml(text) + '</s>' : escapeHtml(text);
+    });
+    noteArea.innerHTML = lines.join('<br>');
+
+    overlay.classList.remove('active');
+    overlay.classList.remove('exiting');
+    overlay.innerHTML = '';
+    noteArea.style.display = '';
+    noteArea.dispatchEvent(new Event('blur'));
+  }, 150);
+}
+
+function htmlToLines(html) {
+  const rawSegments = html
+    .replace(/<\/div>\s*<div[^>]*>/gi, '\n')
+    .replace(/<div[^>]*>/gi, '\n')
+    .replace(/<\/div>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .split('\n');
+
+  return rawSegments.map(seg => {
+    const checked = /<s[^>]*>/i.test(seg) || /line-through/i.test(seg);
+    const tmp = document.createElement('div');
+    tmp.innerHTML = seg;
+    const text = tmp.textContent.trim();
+    if (!text) return null;
+    return { text, checked };
+  }).filter(Boolean);
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+init();
+</script>
+</body>
+</html>
