@@ -976,7 +976,70 @@ let pagesTabsResizeObserver = null;
 let pagesTabsIntersectionObserver = null;
 const DEFAULT_ACCENT = 'rgb(27,129,112)';
 
-function init() {
+// ─── GOOGLE SHEETS SYNC ───────────────────────────────────────────────────
+const GAS_URL = 'https://script.google.com/a/macros/iberostar.com/s/AKfycbyBz7z9ozimxpJxJZs6I26W7UC89RRxD4iC43qiG-k0OYHztpRa5zSBnxy36pB2WNfS/exec';
+let syncTimeout = null;
+let gasAvailable = true;
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function loadFromGAS() {
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'GET',
+      credentials: 'include'
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    if (json.ok && json.data) {
+      const local = localStorage.getItem('notasapp_v2');
+      if (!local) {
+        pages = json.data.pages || [];
+        currentPage = json.data.currentPage || 0;
+        if (currentPage >= pages.length) currentPage = 0;
+        console.log('[GAS] Datos cargados desde Google Sheets');
+      } else {
+        const localData = JSON.parse(local);
+        const remoteUpdated = json.data._updatedAt || 0;
+        const localUpdated = localData._updatedAt || 0;
+        if (remoteUpdated > localUpdated) {
+          pages = json.data.pages || [];
+          currentPage = json.data.currentPage || 0;
+          if (currentPage >= pages.length) currentPage = 0;
+          console.log('[GAS] Datos remotos más recientes, usando Google Sheets');
+        } else {
+          console.log('[GAS] Datos locales más recientes, usando localStorage');
+        }
+      }
+    }
+  } catch (err) {
+    gasAvailable = false;
+    console.warn('[GAS] No se pudo conectar a Google Sheets:', err.message);
+    console.warn('[GAS] Usando solo localStorage como fallback');
+  }
+}
+
+function saveToGAS(data) {
+  if (!gasAvailable) return;
+  clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(async () => {
+    try {
+      await fetch(GAS_URL, {
+        method: 'POST',
+        credentials: 'include',
+        body: JSON.stringify({
+          key: 'notasapp_v2',
+          value: data
+        })
+      });
+      console.log('[GAS] Guardado en Google Sheets ✓');
+    } catch (err) {
+      console.warn('[GAS] Error al guardar en Google Sheets:', err.message);
+    }
+  }, 1500);
+}
+
+async function init() {
+  // 1. Cargar desde localStorage primero (rápido)
   const saved = localStorage.getItem('notasapp_v2');
   if (saved) {
     try {
@@ -989,9 +1052,21 @@ function init() {
     }
   }
   if (pages.length === 0) {
-    pages.push({ id: uid(), name: 'Hoja 1', dropdowns: [], tabBg: undefined, tabColor: undefined });
+    pages.push({ id: uid(), name: 'Hoja 1', dropdowns: [] });
     currentPage = 0;
   }
+
+  // 2. Intentar sincronizar desde Google Sheets
+  await loadFromGAS();
+
+  // 3. Garantizar estado válido tras GAS
+  if (!pages || pages.length === 0) {
+    pages = [{ id: uid(), name: 'Hoja 1', dropdowns: [] }];
+    currentPage = 0;
+  }
+  if (currentPage >= pages.length) currentPage = 0;
+
+  // 4. Resto del init
   normalizeDropdownData();
   const savedTheme = localStorage.getItem('notasapp_theme') || 'dark';
   document.documentElement.setAttribute('data-theme', savedTheme);
@@ -1006,7 +1081,13 @@ function init() {
 
 function save() {
   syncCurrentPageFromDOM();
-  localStorage.setItem('notasapp_v2', JSON.stringify({ pages, currentPage }));
+  const data = {
+    pages,
+    currentPage,
+    _updatedAt: Date.now()
+  };
+  localStorage.setItem('notasapp_v2', JSON.stringify(data));
+  saveToGAS(data);
 }
 
 function syncCurrentPageFromDOM() {
