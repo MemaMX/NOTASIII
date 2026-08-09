@@ -30,11 +30,14 @@
       --dot: #aaa;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
     body {
       background: var(--bg);
       color: var(--text);
       font-family: 'Segoe UI', sans-serif;
-      min-height: 100vh;
       transition: background 0.3s, color 0.3s;
     }
 
@@ -45,9 +48,8 @@
       min-width: 320px;
       max-width: 900px;
       margin: 0 auto;
-      resize: horizontal;
-      overflow: visible;
-      min-height: 100vh;
+      height: 100vh;
+      overflow-y: auto;
       padding-bottom: 60px;
     }
 
@@ -232,16 +234,6 @@
       to   { opacity: 1; transform: translateY(0) scale(1); }
     }
 
-    .dropdown-wrap.dragging {
-      opacity: 0.5;
-      outline: 2px dashed var(--accent);
-      border-radius: 12px;
-    }
-    .dropdown-wrap.drag-over {
-      outline: 2px solid var(--accent);
-      border-radius: 12px;
-    }
-
     .dd-controls {
       display: flex;
       flex-direction: column;
@@ -250,17 +242,6 @@
       gap: 6px;
       flex-shrink: 0;
     }
-    .dd-drag {
-      cursor: grab;
-      color: var(--text-muted);
-      font-size: 15px;
-      line-height: 1;
-      user-select: none;
-      letter-spacing: -1px;
-      transition: color 0.2s, transform 0.2s;
-    }
-    .dd-drag:hover { color: var(--accent); }
-    .dd-drag:active { cursor: grabbing; transform: scale(1.2); }
     .dd-del {
       background: none;
       border: none;
@@ -282,12 +263,26 @@
       overflow: hidden;
       pointer-events: none;
     }
-    .dd-drop-indicator {
-      height: 3px;
-      background: var(--accent);
-      border-radius: 3px;
-      margin: -7px 0;
-      transition: opacity 0.15s;
+    .dd-up, .dd-down {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      padding: 2px 5px;
+      border-radius: 6px;
+      transition: color 0.2s, background 0.2s, transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
+      user-select: none;
+    }
+    .dd-up:hover, .dd-down:hover {
+      color: var(--accent);
+      background: rgba(128,128,128,0.12);
+      transform: scale(1.18);
+    }
+    .dd-up:disabled, .dd-down:disabled {
+      opacity: 0.2;
+      cursor: default;
       pointer-events: none;
     }
     .checklist-overlay {
@@ -365,7 +360,18 @@
     }
     .dd-body-inner { overflow: hidden; }
     .dropdown input.dd-state:checked ~ .dd-body { grid-template-rows: 1fr; }
-    .dd-list { padding: 8px 12px 12px; }
+    .dd-list {
+      padding: 8px 12px 12px;
+      max-height: calc(13 * 1.6em + 20px);
+      overflow-y: auto;
+      transition: box-shadow 0.3s ease;
+    }
+    :root[data-theme="dark"] .dd-list.has-scroll-top {
+      box-shadow: inset 0 8px 10px -6px rgba(255,255,255,0.08);
+    }
+    :root[data-theme="light"] .dd-list.has-scroll-top {
+      box-shadow: inset 0 8px 10px -6px rgba(0,0,0,0.10);
+    }
 
     .dd-trigger {
       cursor: pointer;
@@ -643,30 +649,9 @@
       padding: 40px 0 20px;
     }
 
-    #dragGhost {
-      position: fixed;
-      pointer-events: none;
-      z-index: 9999;
-      opacity: 0.85;
-      border-radius: 12px;
-      background: var(--surface2);
-      border: 2px solid var(--accent);
-      padding: 10px 18px;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.35);
-      transition: transform 0.12s cubic-bezier(0.34,1.56,0.64,1);
-      display: none;
-      white-space: nowrap;
-      max-width: 260px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
   </style>
 </head>
 <body>
-<div id="dragGhost"></div>
 
 <div class="modal-overlay" id="newPageModal">
   <div class="modal">
@@ -751,10 +736,7 @@ let dropdownColorPopover = null;
 let accentPopover = null;
 let globalPopoverCleanup = null;
 let checklistActive = false;
-const ghost = document.getElementById('dragGhost');
 const DEFAULT_ACCENT = 'rgb(27,129,112)';
-let dragState = null;
-let dropIndicator = null;
 
 function init() {
   const saved = localStorage.getItem('notasapp_v2');
@@ -789,14 +771,16 @@ function save() {
 function syncCurrentPageFromDOM() {
   const page = pages[currentPage];
   if (!page) return;
-  document.querySelectorAll('.dropdown-wrap:not(.removing)').forEach((wrap, i) => {
-    if (!page.dropdowns[i]) return;
+  document.querySelectorAll('.dropdown-wrap:not(.removing)').forEach((wrap) => {
+    const ddId = wrap.dataset.id;
+    const dd = page.dropdowns.find(d => d.id === ddId);
+    if (!dd) return;
     const titleEl = wrap.querySelector('.dd-title');
     const noteEl = wrap.querySelector('.note-area');
     const stateEl = wrap.querySelector('.dd-state');
-    if (titleEl) page.dropdowns[i].title = titleEl.value;
-    if (noteEl) page.dropdowns[i].content = noteEl.innerHTML;
-    if (stateEl) page.dropdowns[i].open = stateEl.checked;
+    if (titleEl) dd.title = titleEl.value;
+    if (noteEl) dd.content = noteEl.innerHTML;
+    if (stateEl) dd.open = stateEl.checked;
   });
 }
 
@@ -897,14 +881,24 @@ function buildDropdownEl(dd, index) {
   const wrap = document.createElement('div');
   wrap.className = 'dropdown-wrap';
   wrap.dataset.index = index;
+  wrap.dataset.id = dd.id;
 
   const controls = document.createElement('div');
   controls.className = 'dd-controls';
 
-  const dragHandle = document.createElement('div');
-  dragHandle.className = 'dd-drag';
-  dragHandle.title = 'Arrastrar para ordenar';
-  dragHandle.innerHTML = '&#8942;&#8942;';
+  const upBtn = document.createElement('button');
+  upBtn.className = 'dd-up';
+  upBtn.title = 'Mover arriba';
+  upBtn.textContent = '↑';
+  upBtn.disabled = index === 0;
+  upBtn.addEventListener('click', () => moveDropdown(index, -1));
+
+  const downBtn = document.createElement('button');
+  downBtn.className = 'dd-down';
+  downBtn.title = 'Mover abajo';
+  downBtn.textContent = '↓';
+  downBtn.disabled = index === pages[currentPage].dropdowns.length - 1;
+  downBtn.addEventListener('click', () => moveDropdown(index, 1));
 
   const delBtn = document.createElement('button');
   delBtn.className = 'dd-del';
@@ -912,9 +906,9 @@ function buildDropdownEl(dd, index) {
   delBtn.textContent = '×';
   delBtn.addEventListener('click', () => deleteDropdown(index, wrap));
 
-  controls.appendChild(dragHandle);
+  controls.appendChild(upBtn);
+  controls.appendChild(downBtn);
   controls.appendChild(delBtn);
-  setupDrag(wrap, dragHandle);
 
   const dropdown = document.createElement('div');
   dropdown.className = 'dropdown';
@@ -1001,6 +995,10 @@ function buildDropdownEl(dd, index) {
 
   ddList.appendChild(noteArea);
   ddList.appendChild(clOverlay);
+  ddList.addEventListener('scroll', () => {
+    if (ddList.scrollTop > 0) ddList.classList.add('has-scroll-top');
+    else ddList.classList.remove('has-scroll-top');
+  });
   ddBodyInner.appendChild(ddList);
   ddBody.appendChild(ddBodyInner);
 
@@ -1019,32 +1017,34 @@ function buildDropdownEl(dd, index) {
   return wrap;
 }
 
-function handlePipeRule(e, el, dd) {
-  if (e.key === ' ') {
-    const sel = window.getSelection();
-    if (!sel.rangeCount) return;
-    const range = sel.getRangeAt(0);
-    const node = range.startContainer;
-    if (node.nodeType !== Node.TEXT_NODE) return;
-    const text = node.textContent;
-    const cursorPos = range.startOffset;
-    const textBefore = text.substring(0, cursorPos);
-    const match = textBefore.match(/(\d+)$/);
-    if (match) {
-      e.preventDefault();
-      const digits = match[1];
-      const beforeDigits = textBefore.slice(0, textBefore.length - digits.length);
-      const afterCursor = text.substring(cursorPos);
-      node.textContent = beforeDigits + digits + ' | ' + afterCursor;
-      const newPos = beforeDigits.length + digits.length + 3;
-      const newRange = document.createRange();
-      newRange.setStart(node, newPos);
-      newRange.collapse(true);
-      sel.removeAllRanges();
-      sel.addRange(newRange);
-      dd.content = el.innerHTML;
-    }
-  }
+function handlePipeRule(e, noteArea, dd) {
+  if (e.key !== ' ') return;
+
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  if (!range.collapsed) return;
+
+  const node = range.startContainer;
+  if (node.nodeType !== Node.TEXT_NODE) return;
+  const textBefore = node.textContent.slice(0, range.startOffset);
+
+  if (!/^\d{4}$/.test(textBefore)) return;
+
+  e.preventDefault();
+
+  const fullText = node.textContent;
+  const after = fullText.slice(range.startOffset);
+  node.textContent = textBefore + ' | ' + after;
+
+  const newRange = document.createRange();
+  newRange.setStart(node, textBefore.length + 3);
+  newRange.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(newRange);
+
+  dd.content = noteArea.innerHTML;
+  save();
 }
 
 function fmt(cmd) {
@@ -1128,102 +1128,54 @@ function deleteDropdown(index, wrapEl) {
   }, 320);
 }
 
-function setupDrag(wrap, handle) {
-  handle.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    handle.setPointerCapture(e.pointerId);
+function moveDropdown(index, dir) {
+  const page = pages[currentPage];
+  const newIndex = index + dir;
+  if (newIndex < 0 || newIndex >= page.dropdowns.length) return;
 
-    const titleEl = wrap.querySelector('.dd-title');
-    const title = titleEl ? titleEl.value : 'Dropdown';
+  const list = document.getElementById('dropdownsList');
+  const wraps = Array.from(list.querySelectorAll('.dropdown-wrap:not(.removing)'));
+  const elA = wraps[index];
+  const elB = wraps[newIndex];
 
-    ghost.textContent = title;
-    ghost.style.display = 'block';
-    ghost.style.left = (e.clientX + 12) + 'px';
-    ghost.style.top = (e.clientY - 16) + 'px';
+  if (!elA || !elB) return;
 
-    const list = document.getElementById('dropdownsList');
-    const allWraps = Array.from(list.querySelectorAll('.dropdown-wrap'));
-    const srcIndex = allWraps.indexOf(wrap);
-    dragState = { srcIndex, srcWrap: wrap, dropTarget: null };
-    wrap.classList.add('dragging');
+  const rectA = elA.getBoundingClientRect();
+  const rectB = elB.getBoundingClientRect();
 
-    dropIndicator = document.createElement('div');
-    dropIndicator.id = 'dropIndicator';
-    dropIndicator.className = 'dd-drop-indicator';
+  [page.dropdowns[index], page.dropdowns[newIndex]] = [page.dropdowns[newIndex], page.dropdowns[index]];
+  save();
 
-    handle.addEventListener('pointermove', onPointerMove);
-    handle.addEventListener('pointerup', onPointerUp, { once: true });
-    handle.addEventListener('pointercancel', onPointerUp, { once: true });
-  });
+  const diffA = rectB.top - rectA.top;
+  const diffB = rectA.top - rectB.top;
 
-  function getInsertTarget(clientY) {
-    const list = document.getElementById('dropdownsList');
-    const wraps = Array.from(list.querySelectorAll('.dropdown-wrap'));
-    for (const w of wraps) {
-      if (w === dragState.srcWrap) continue;
-      const rect = w.getBoundingClientRect();
-      if (clientY < rect.top + rect.height / 2) return { wrap: w, position: 'before' };
-      if (clientY < rect.bottom) return { wrap: w, position: 'after' };
-    }
-    return null;
-  }
+  renderDropdowns();
 
-  function onPointerMove(e) {
-    if (!dragState) return;
-    ghost.style.left = (e.clientX + 12) + 'px';
-    ghost.style.top = (e.clientY - 16) + 'px';
+  const newWraps = Array.from(list.querySelectorAll('.dropdown-wrap:not(.removing)'));
+  const newElA = newWraps[newIndex];
+  const newElB = newWraps[index];
 
-    if (dropIndicator.parentNode) dropIndicator.parentNode.removeChild(dropIndicator);
-
-    const list = document.getElementById('dropdownsList');
-    const target = getInsertTarget(e.clientY);
-    dragState.dropTarget = target;
-    if (target) {
-      if (target.position === 'before') list.insertBefore(dropIndicator, target.wrap);
-      else target.wrap.after(dropIndicator);
-    } else {
-      list.appendChild(dropIndicator);
-    }
-  }
-
-  function onPointerUp() {
-    handle.removeEventListener('pointermove', onPointerMove);
-    ghost.style.display = 'none';
-
-    if (dragState) {
-      const list = document.getElementById('dropdownsList');
-      if (dropIndicator && dropIndicator.parentNode) dropIndicator.parentNode.removeChild(dropIndicator);
-      const wraps = Array.from(list.querySelectorAll('.dropdown-wrap'));
-      const target = dragState.dropTarget || null;
-      const srcIndex = wraps.indexOf(dragState.srcWrap);
-
-      if (srcIndex !== -1) {
-        let insertAt;
-        if (!target) insertAt = wraps.length;
-        else {
-          const targetIdx = wraps.indexOf(target.wrap);
-          insertAt = target.position === 'before' ? targetIdx : targetIdx + 1;
-        }
-        const adjustedTarget = insertAt > srcIndex ? insertAt - 1 : insertAt;
-        if (adjustedTarget !== srcIndex) {
-          syncCurrentPageFromDOM();
-          const page = pages[currentPage];
-          const moved = page.dropdowns.splice(srcIndex, 1)[0];
-          page.dropdowns.splice(adjustedTarget, 0, moved);
-          save();
-          renderDropdowns();
-        }
-      }
-    } else if (dropIndicator && dropIndicator.parentNode) {
-      dropIndicator.parentNode.removeChild(dropIndicator);
-    }
-
-    document.querySelectorAll('.dropdown-wrap').forEach(w => {
-      w.classList.remove('drag-over');
-      w.classList.remove('dragging');
+  if (newElA) {
+    newElA.style.transition = 'none';
+    newElA.style.transform = `translateY(${-diffA}px)`;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        newElA.style.transition = 'transform 0.45s cubic-bezier(0.34,1.56,0.64,1)';
+        newElA.style.transform = '';
+        setTimeout(() => { newElA.style.transition = ''; }, 500);
+      });
     });
-    dragState = null;
-    dropIndicator = null;
+  }
+  if (newElB) {
+    newElB.style.transition = 'none';
+    newElB.style.transform = `translateY(${-diffB}px)`;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        newElB.style.transition = 'transform 0.45s cubic-bezier(0.34,1.56,0.64,1)';
+        newElB.style.transform = '';
+        setTimeout(() => { newElB.style.transition = ''; }, 500);
+      });
+    });
   }
 }
 
@@ -1443,7 +1395,7 @@ function confirmNewPage() {
     id: uid(),
     name: 'Hoja ' + (pages.length + 1),
     dropdowns: keep
-      ? page.dropdowns.map(dd => ({ id: uid(), title: dd.title, content: '', open: dd.open, headerBg: dd.headerBg, headerColor: dd.headerColor }))
+      ? page.dropdowns.map(dd => ({ id: uid(), title: dd.title, content: '', open: false, headerBg: dd.headerBg, headerColor: dd.headerColor }))
       : []
   };
   pages.push(newPage);
@@ -1458,13 +1410,13 @@ function confirmNewPage() {
 
 function switchPage(i) {
   if (i === currentPage) return;
+  syncCurrentPageFromDOM();
   const list = document.getElementById('dropdownsList');
   list.style.transition = 'opacity 0.15s';
   list.style.opacity = '0';
   setTimeout(() => {
-    syncCurrentPageFromDOM();
     currentPage = i;
-    save();
+    localStorage.setItem('notasapp_v2', JSON.stringify({ pages, currentPage }));
     renderAll();
     list.style.opacity = '1';
   }, 150);
