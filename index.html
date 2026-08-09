@@ -49,6 +49,26 @@
       max-width: 900px;
       margin: 0 auto;
       height: 100vh;
+      overflow: hidden;
+    }
+
+    #header-fixed {
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg);
+      transition: box-shadow 0.3s ease;
+    }
+    :root[data-theme="dark"] #header-fixed.scrolled {
+      box-shadow: 0 6px 18px -4px rgba(255,255,255,0.13);
+    }
+    :root[data-theme="light"] #header-fixed.scrolled {
+      box-shadow: 0 6px 18px -4px rgba(0,0,0,0.18);
+    }
+
+    #scrollable-content {
+      flex: 1;
       overflow-y: auto;
       padding-bottom: 60px;
     }
@@ -268,20 +288,23 @@
       border: none;
       color: var(--text-muted);
       cursor: pointer;
-      font-size: 16px;
-      line-height: 1;
-      padding: 2px 5px;
-      border-radius: 6px;
-      transition: color 0.2s, background 0.2s, transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border-radius: 5px;
+      transition: color 0.2s, background 0.2s, transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
       user-select: none;
     }
     .dd-up:hover, .dd-down:hover {
       color: var(--accent);
       background: rgba(128,128,128,0.12);
-      transform: scale(1.18);
+      transform: scale(1.22);
     }
     .dd-up:disabled, .dd-down:disabled {
-      opacity: 0.2;
+      opacity: 0.18;
       cursor: default;
       pointer-events: none;
     }
@@ -367,10 +390,10 @@
       transition: box-shadow 0.3s ease;
     }
     :root[data-theme="dark"] .dd-list.has-scroll-top {
-      box-shadow: inset 0 8px 10px -6px rgba(255,255,255,0.08);
+      box-shadow: inset 0 10px 14px -8px rgba(255,255,255,0.14);
     }
     :root[data-theme="light"] .dd-list.has-scroll-top {
-      box-shadow: inset 0 8px 10px -6px rgba(0,0,0,0.10);
+      box-shadow: inset 0 10px 14px -8px rgba(0,0,0,0.16);
     }
 
     .dd-trigger {
@@ -569,6 +592,25 @@
       flex-shrink: 0;
     }
     .page-tab-del:hover { opacity: 1; background: rgba(255,255,255,0.2); }
+    .page-tab-color-btn {
+      background: none;
+      border: none;
+      color: inherit;
+      cursor: pointer;
+      opacity: 0.5;
+      padding: 1px 2px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      transition: opacity 0.2s, transform 0.2s;
+      flex-shrink: 0;
+    }
+    .page-tab:hover .page-tab-color-btn,
+    .page-tab.active .page-tab-color-btn { opacity: 0.85; }
+    .page-tab-color-btn:hover {
+      opacity: 1;
+      transform: scale(1.1);
+    }
     @keyframes tabSlideIn {
       from { opacity: 0; transform: translateX(20px) scale(0.9); }
       to   { opacity: 1; transform: translateX(0) scale(1); }
@@ -668,63 +710,67 @@
 </div>
 
 <div class="app-wrapper" id="appWrapper">
-  <div class="topbar">
-    <span class="topbar-title">Notas</span>
-    <div class="topbar-right">
-      <button class="accent-btn" id="accentBtn" title="Colores de interfaz" type="button"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="8" cy="10" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="10" r="1.5" fill="currentColor" stroke="none"/><path d="M12 19c-1.5 0-4-1.5-4-4 0-1 .5-2 2-2h4c1.5 0 2 1 2 2 0 2.5-2.5 4-4 4z"/></svg></button>
-      <div class="toggle-switch" title="Modo claro/oscuro">
-        <label class="switch-label">
-          <input type="checkbox" class="checkbox" id="themeToggle" />
-          <span class="slider"></span>
-        </label>
+  <div id="header-fixed">
+    <div class="topbar">
+      <span class="topbar-title">Notas</span>
+      <div class="topbar-right">
+        <button class="accent-btn" id="accentBtn" title="Colores de interfaz" type="button"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="8" cy="10" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="10" r="1.5" fill="currentColor" stroke="none"/><path d="M12 19c-1.5 0-4-1.5-4-4 0-1 .5-2 2-2h4c1.5 0 2 1 2 2 0 2.5-2.5 4-4 4z"/></svg></button>
+        <div class="toggle-switch" title="Modo claro/oscuro">
+          <label class="switch-label">
+            <input type="checkbox" class="checkbox" id="themeToggle" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <button class="btn-new-page" title="Nueva hoja" onclick="openNewPageModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="38px" height="38px" viewBox="0 0 24 24" stroke-width="1.5">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="12" y1="11" x2="12" y2="17"></line>
+            <line x1="9" y1="14" x2="15" y2="14"></line>
+          </svg>
+        </button>
+        <button class="btn-add-dropdown" title="Agregar dropdown" onclick="addDropdown()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="38px" height="38px" viewBox="0 0 24 24" stroke-width="1.5">
+            <path d="M12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22Z"></path>
+            <path d="M8 12H16"></path>
+            <path d="M12 16V8"></path>
+          </svg>
+        </button>
       </div>
-      <button class="btn-new-page" title="Nueva hoja" onclick="openNewPageModal()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="38px" height="38px" viewBox="0 0 24 24" stroke-width="1.5">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
-          <line x1="12" y1="11" x2="12" y2="17"></line>
-          <line x1="9" y1="14" x2="15" y2="14"></line>
-        </svg>
-      </button>
-      <button class="btn-add-dropdown" title="Agregar dropdown" onclick="addDropdown()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="38px" height="38px" viewBox="0 0 24 24" stroke-width="1.5">
-          <path d="M12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22Z"></path>
-          <path d="M8 12H16"></path>
-          <path d="M12 16V8"></path>
-        </svg>
-      </button>
+    </div>
+
+    <div class="pages-nav" id="pagesNav"></div>
+
+    <div class="toolbar" id="toolbar">
+      <button onclick="fmt('bold')" title="Negrita"><b>B</b></button>
+      <button onclick="fmt('italic')" title="Italica"><i>I</i></button>
+      <button onclick="fmt('underline')" title="Subrayado"><u>U</u></button>
+      <div class="toolbar-sep"></div>
+      <select id="fontFamily" onchange="applyFont()" title="Tipo de fuente">
+        <option value="Segoe UI">Segoe UI</option>
+        <option value="Georgia">Georgia</option>
+        <option value="Courier New">Courier New</option>
+        <option value="Arial">Arial</option>
+        <option value="Times New Roman">Times New Roman</option>
+        <option value="Verdana">Verdana</option>
+        <option value="monospace">Monospace</option>
+      </select>
+      <input type="number" id="fontSize" min="8" max="72" value="15" title="Tamano de fuente" onchange="applyFontSize()" style="width:52px" />
+      <div class="toolbar-sep"></div>
+      <label class="toolbar-color-wrap" title="Color de texto">
+        <span>A</span>
+        <input type="color" id="textColorPicker" value="#000000" onchange="applyTextColor(this.value)" />
+      </label>
+      <div class="toolbar-sep"></div>
+      <button id="btnChecklist" onclick="toggleChecklistMode()" title="Modo checklist">Checklist</button>
+      <button id="btnChecklistDone" onclick="saveChecklistMode()" title="Guardar checklist" style="display:none">Listo</button>
     </div>
   </div>
 
-  <div class="pages-nav" id="pagesNav"></div>
-
-  <div class="toolbar" id="toolbar">
-    <button onclick="fmt('bold')" title="Negrita"><b>B</b></button>
-    <button onclick="fmt('italic')" title="Italica"><i>I</i></button>
-    <button onclick="fmt('underline')" title="Subrayado"><u>U</u></button>
-    <div class="toolbar-sep"></div>
-    <select id="fontFamily" onchange="applyFont()" title="Tipo de fuente">
-      <option value="Segoe UI">Segoe UI</option>
-      <option value="Georgia">Georgia</option>
-      <option value="Courier New">Courier New</option>
-      <option value="Arial">Arial</option>
-      <option value="Times New Roman">Times New Roman</option>
-      <option value="Verdana">Verdana</option>
-      <option value="monospace">Monospace</option>
-    </select>
-    <input type="number" id="fontSize" min="8" max="72" value="15" title="Tamano de fuente" onchange="applyFontSize()" style="width:52px" />
-    <div class="toolbar-sep"></div>
-    <label class="toolbar-color-wrap" title="Color de texto">
-      <span>A</span>
-      <input type="color" id="textColorPicker" value="#000000" onchange="applyTextColor(this.value)" />
-    </label>
-    <div class="toolbar-sep"></div>
-    <button id="btnChecklist" onclick="toggleChecklistMode()" title="Modo checklist">Checklist</button>
-    <button id="btnChecklistDone" onclick="saveChecklistMode()" title="Guardar checklist" style="display:none">Listo</button>
-  </div>
-
-  <div class="dropdowns-list" id="dropdownsList">
-    <p class="no-dropdowns-msg" id="emptyMsg">No hay dropdowns. Presiona <b>+</b> para agregar uno.</p>
+  <div id="scrollable-content">
+    <div class="dropdowns-list" id="dropdownsList">
+      <p class="no-dropdowns-msg" id="emptyMsg">No hay dropdowns. Presiona <b>+</b> para agregar uno.</p>
+    </div>
   </div>
 </div>
 
@@ -751,7 +797,7 @@ function init() {
     }
   }
   if (pages.length === 0) {
-    pages.push({ id: uid(), name: 'Hoja 1', dropdowns: [] });
+    pages.push({ id: uid(), name: 'Hoja 1', dropdowns: [], tabBg: undefined, tabColor: undefined });
     currentPage = 0;
   }
   normalizeDropdownData();
@@ -760,6 +806,7 @@ function init() {
   document.getElementById('themeToggle').checked = savedTheme === 'light';
   applySavedAccent(savedTheme);
   setupAccentButton();
+  setupScrollableHeaderShadow();
   renderAll();
 }
 
@@ -788,6 +835,7 @@ function renderAll() {
   closeDropdownColorPopover(true);
   renderPagesNav();
   renderDropdowns();
+  updateHeaderScrollState();
 }
 
 function renderPagesNav() {
@@ -797,6 +845,11 @@ function renderPagesNav() {
     const tab = document.createElement('div');
     tab.className = 'page-tab' + (i === currentPage ? ' active' : '');
     tab.title = 'Doble clic para renombrar';
+    if (p.tabBg) tab.style.background = p.tabBg;
+    if (p.tabColor) {
+      tab.style.color = p.tabColor;
+      tab.style.borderColor = p.tabBg || p.tabColor;
+    }
 
     const nameSpan = document.createElement('span');
     nameSpan.className = 'page-tab-name';
@@ -805,6 +858,17 @@ function renderPagesNav() {
     nameSpan.style.textOverflow = 'ellipsis';
     nameSpan.style.whiteSpace = 'nowrap';
     tab.appendChild(nameSpan);
+
+    const colorTabBtn = document.createElement('button');
+    colorTabBtn.className = 'page-tab-color-btn';
+    colorTabBtn.title = 'Color de pestaña';
+    colorTabBtn.type = 'button';
+    colorTabBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 19.5A2.5 2.5 0 0 0 4.5 22c.93 0 2-.75 2-2.5V5a2 2 0 1 1 4 0v14.5c0 1.75 1.07 2.5 2 2.5a2.5 2.5 0 0 0 2.5-2.5v-7a2 2 0 1 1 4 0v7"/></svg>';
+    colorTabBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openTabColorPopover(p, i, colorTabBtn);
+    });
+    tab.appendChild(colorTabBtn);
 
     if (pages.length > 1) {
       const delBtn = document.createElement('button');
@@ -889,14 +953,14 @@ function buildDropdownEl(dd, index) {
   const upBtn = document.createElement('button');
   upBtn.className = 'dd-up';
   upBtn.title = 'Mover arriba';
-  upBtn.textContent = '↑';
+  upBtn.innerHTML = '<svg width="10" height="7" viewBox="0 0 10 7" fill="currentColor" aria-hidden="true"><polygon points="5,0 10,7 0,7"/></svg>';
   upBtn.disabled = index === 0;
   upBtn.addEventListener('click', () => moveDropdown(index, -1));
 
   const downBtn = document.createElement('button');
   downBtn.className = 'dd-down';
   downBtn.title = 'Mover abajo';
-  downBtn.textContent = '↓';
+  downBtn.innerHTML = '<svg width="10" height="7" viewBox="0 0 10 7" fill="currentColor" aria-hidden="true"><polygon points="0,0 10,0 5,7"/></svg>';
   downBtn.disabled = index === pages[currentPage].dropdowns.length - 1;
   downBtn.addEventListener('click', () => moveDropdown(index, 1));
 
@@ -1142,12 +1206,11 @@ function moveDropdown(index, dir) {
 
   const rectA = elA.getBoundingClientRect();
   const rectB = elB.getBoundingClientRect();
+  const diffA = rectB.top - rectA.top;
+  const diffB = rectA.top - rectB.top;
 
   [page.dropdowns[index], page.dropdowns[newIndex]] = [page.dropdowns[newIndex], page.dropdowns[index]];
   save();
-
-  const diffA = rectB.top - rectA.top;
-  const diffB = rectA.top - rectB.top;
 
   renderDropdowns();
 
@@ -1155,38 +1218,54 @@ function moveDropdown(index, dir) {
   const newElA = newWraps[newIndex];
   const newElB = newWraps[index];
 
-  if (newElA) {
-    newElA.style.transition = 'none';
-    newElA.style.transform = `translateY(${-diffA}px)`;
+  function animateFlip(el, diff) {
+    if (!el) return;
+    el.style.animation = 'none';
+    el.style.transition = 'none';
+    el.style.transform = `translateY(${-diff}px) scale(0.985)`;
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        newElA.style.transition = 'transform 0.45s cubic-bezier(0.34,1.56,0.64,1)';
-        newElA.style.transform = '';
-        setTimeout(() => { newElA.style.transition = ''; }, 500);
+        el.style.transition = 'transform 0.5s cubic-bezier(0.34,1.56,0.64,1)';
+        el.style.transform = 'translateY(0) scale(1)';
+        setTimeout(() => {
+          el.style.transition = '';
+          el.style.transform = '';
+          el.style.animation = '';
+        }, 550);
       });
     });
   }
-  if (newElB) {
-    newElB.style.transition = 'none';
-    newElB.style.transform = `translateY(${-diffB}px)`;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        newElB.style.transition = 'transform 0.45s cubic-bezier(0.34,1.56,0.64,1)';
-        newElB.style.transform = '';
-        setTimeout(() => { newElB.style.transition = ''; }, 500);
-      });
-    });
-  }
+
+  animateFlip(newElA, diffA);
+  animateFlip(newElB, diffB);
 }
 
 function normalizeDropdownData() {
   pages.forEach(page => {
+    if (!Object.prototype.hasOwnProperty.call(page, 'tabBg')) page.tabBg = undefined;
+    if (!Object.prototype.hasOwnProperty.call(page, 'tabColor')) page.tabColor = undefined;
     page.dropdowns = (page.dropdowns || []).map(dd => ({
       ...dd,
       headerBg: Object.prototype.hasOwnProperty.call(dd, 'headerBg') ? dd.headerBg : undefined,
       headerColor: Object.prototype.hasOwnProperty.call(dd, 'headerColor') ? dd.headerColor : undefined
     }));
   });
+}
+
+function updateHeaderScrollState() {
+  const header = document.getElementById('header-fixed');
+  const scrollable = document.getElementById('scrollable-content');
+  if (!header || !scrollable) return;
+  if (scrollable.scrollTop > 0) header.classList.add('scrolled');
+  else header.classList.remove('scrolled');
+}
+
+function setupScrollableHeaderShadow() {
+  const scrollable = document.getElementById('scrollable-content');
+  if (!scrollable || scrollable.dataset.shadowBound === '1') return;
+  scrollable.dataset.shadowBound = '1';
+  scrollable.addEventListener('scroll', updateHeaderScrollState, { passive: true });
+  updateHeaderScrollState();
 }
 
 function setPopoverPosition(popover, anchorEl) {
@@ -1216,6 +1295,53 @@ function clearGlobalPopoverCleanup(cleanup) {
   window.removeEventListener('resize', active.onResize);
   window.removeEventListener('scroll', active.onResize);
   if (!cleanup || globalPopoverCleanup === cleanup) globalPopoverCleanup = null;
+}
+
+function openTabColorPopover(page, pageIndex, anchorEl) {
+  closeAccentPopover(true);
+  closeDropdownColorPopover(true);
+  const pop = document.createElement('div');
+  pop.className = 'floating-popover';
+  pop.innerHTML = `
+    <h4>Color de pestaña</h4>
+    <label class="popover-color-row"><span>Fondo</span><input type="color" value="${toColorInputValue(page.tabBg, '#2c2c2c')}" data-role="bg"></label>
+    <label class="popover-color-row"><span>Texto</span><input type="color" value="${toColorInputValue(page.tabColor, '#e8e8e8')}" data-role="color"></label>
+    <div class="popover-actions">
+      <button type="button" data-action="clear">Limpiar</button>
+      <button type="button" class="primary-btn" data-action="apply">Aplicar</button>
+    </div>
+  `;
+  document.body.appendChild(pop);
+  dropdownColorPopover = pop;
+  setPopoverPosition(pop, anchorEl);
+  requestAnimationFrame(() => pop.classList.add('open'));
+
+  const cleanup = {
+    onOutsidePointerDown: (event) => {
+      if (!pop.contains(event.target) && !anchorEl.contains(event.target)) closeDropdownColorPopover();
+    },
+    onResize: () => {
+      if (dropdownColorPopover === pop) setPopoverPosition(pop, anchorEl);
+    },
+    close: closeDropdownColorPopover
+  };
+  registerPopoverCleanup(cleanup);
+  pop._cleanup = cleanup;
+
+  pop.querySelector('[data-action="apply"]').addEventListener('click', () => {
+    page.tabBg = pop.querySelector('[data-role="bg"]').value;
+    page.tabColor = pop.querySelector('[data-role="color"]').value;
+    save();
+    renderPagesNav();
+    closeDropdownColorPopover(true);
+  });
+  pop.querySelector('[data-action="clear"]').addEventListener('click', () => {
+    page.tabBg = undefined;
+    page.tabColor = undefined;
+    save();
+    renderPagesNav();
+    closeDropdownColorPopover(true);
+  });
 }
 
 function openDropdownColorPopover(dd, buttonEl, triggerEl, titleInput) {
@@ -1394,6 +1520,8 @@ function confirmNewPage() {
   const newPage = {
     id: uid(),
     name: 'Hoja ' + (pages.length + 1),
+    tabBg: undefined,
+    tabColor: undefined,
     dropdowns: keep
       ? page.dropdowns.map(dd => ({ id: uid(), title: dd.title, content: '', open: false, headerBg: dd.headerBg, headerColor: dd.headerColor }))
       : []
