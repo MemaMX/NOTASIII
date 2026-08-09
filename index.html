@@ -198,6 +198,77 @@
       border-color: var(--accent);
     }
     .toolbar select { padding: 4px 6px; max-width: 110px; }
+    .font-menu-trigger {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 4px 9px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      max-width: 120px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .font-menu-trigger:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .font-menu-trigger::after {
+      content: '▾';
+      font-size: 10px;
+      opacity: 0.7;
+      flex-shrink: 0;
+    }
+    .font-menu-panel {
+      position: fixed;
+      z-index: 3000;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 8px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.3);
+      min-width: 160px;
+      opacity: 0;
+      transform: scale(0.96) translateY(-6px);
+      pointer-events: none;
+      transition: opacity 0.22s cubic-bezier(0.4,0,0.2,1), transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .font-menu-panel.open {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+      pointer-events: auto;
+    }
+    .font-menu-item {
+      display: block;
+      width: 100%;
+      padding: 7px 12px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-size: 13px;
+      text-align: left;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, transform 0.18s cubic-bezier(0.34,1.56,0.64,1);
+      font-family: inherit;
+    }
+    .font-menu-item:hover {
+      background: var(--surface2);
+      color: var(--accent);
+      transform: translateX(3px);
+    }
+    .font-menu-item.active-font {
+      color: var(--accent);
+      font-weight: 600;
+    }
     .toolbar input[type=number] {
       width: 52px;
       background: var(--surface2);
@@ -543,7 +614,86 @@
       align-items: center;
       gap: 6px;
       padding: 6px 8px;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
+      overflow: hidden;
+      position: relative;
+    }
+    .pages-nav-tabs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: nowrap;
+      overflow: hidden;
+      flex: 1;
+      min-width: 0;
+    }
+    .pages-overflow-btn {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, color 0.2s, transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
+      flex-shrink: 0;
+    }
+    .pages-overflow-btn:hover {
+      background: var(--surface2);
+      color: var(--accent);
+      border-color: var(--accent);
+      transform: scale(1.08);
+    }
+    .pages-overflow-panel {
+      position: fixed;
+      z-index: 3000;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 8px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.3);
+      min-width: 180px;
+      max-height: 320px;
+      overflow-y: auto;
+      opacity: 0;
+      transform: scale(0.96) translateY(-6px);
+      pointer-events: none;
+      transition: opacity 0.22s cubic-bezier(0.4,0,0.2,1), transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .pages-overflow-panel.open {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+      pointer-events: auto;
+    }
+    .pages-overflow-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-size: 13px;
+      text-align: left;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, transform 0.18s cubic-bezier(0.34,1.56,0.64,1);
+      font-family: inherit;
+    }
+    .pages-overflow-item:hover {
+      background: var(--surface2);
+      color: var(--text);
+      transform: translateX(3px);
+    }
+    .pages-overflow-item.active-page {
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
     }
     .page-tab {
       padding: 5px 14px;
@@ -739,7 +889,16 @@
       </div>
     </div>
 
-    <div class="pages-nav" id="pagesNav"></div>
+    <div class="pages-nav" id="pagesNav">
+      <div class="pages-nav-tabs" id="pagesNavTabs"></div>
+      <button class="pages-overflow-btn" id="pagesOverflowBtn" style="display:none" type="button" title="Ver hojas">
+        <svg width="14" height="12" viewBox="0 0 14 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <line x1="1" y1="2" x2="13" y2="2"/>
+          <line x1="1" y1="6" x2="13" y2="6"/>
+          <line x1="1" y1="10" x2="13" y2="10"/>
+        </svg>
+      </button>
+    </div>
 
     <div class="toolbar" id="toolbar">
       <button onclick="fmt('bold')" title="Negrita"><b>B</b></button>
@@ -753,7 +912,7 @@
         <option value="Arial">Arial</option>
         <option value="Times New Roman">Times New Roman</option>
         <option value="Verdana">Verdana</option>
-        <option value="monospace">Monospace</option>
+        <option value="Monospace">Monospace</option>
       </select>
       <input type="number" id="fontSize" min="8" max="72" value="15" title="Tamano de fuente" onchange="applyFontSize()" style="width:52px" />
       <div class="toolbar-sep"></div>
@@ -782,6 +941,13 @@ let dropdownColorPopover = null;
 let accentPopover = null;
 let globalPopoverCleanup = null;
 let checklistActive = false;
+let fontMenuPanel = null;
+let currentFont = 'Segoe UI';
+let fontMenuOutsideHandler = null;
+let pagesOverflowPanel = null;
+let pagesOverflowOutsideHandler = null;
+let pagesTabsResizeObserver = null;
+let pagesTabsIntersectionObserver = null;
 const DEFAULT_ACCENT = 'rgb(27,129,112)';
 
 function init() {
@@ -808,6 +974,8 @@ function init() {
   setupAccentButton();
   setupScrollableHeaderShadow();
   renderAll();
+  buildFontMenu();
+  setupPagesNavResizeObserver();
 }
 
 function save() {
@@ -833,6 +1001,7 @@ function syncCurrentPageFromDOM() {
 
 function renderAll() {
   closeDropdownColorPopover(true);
+  closePagesOverflowPanel(true);
   renderPagesNav();
   renderDropdowns();
   updateHeaderScrollState();
@@ -840,7 +1009,15 @@ function renderAll() {
 
 function renderPagesNav() {
   const nav = document.getElementById('pagesNav');
-  nav.innerHTML = '';
+  if (!nav) return;
+  let tabsContainer = document.getElementById('pagesNavTabs');
+  if (!tabsContainer) {
+    tabsContainer = document.createElement('div');
+    tabsContainer.className = 'pages-nav-tabs';
+    tabsContainer.id = 'pagesNavTabs';
+    nav.appendChild(tabsContainer);
+  }
+  tabsContainer.innerHTML = '';
   pages.forEach((p, i) => {
     const tab = document.createElement('div');
     tab.className = 'page-tab' + (i === currentPage ? ' active' : '');
@@ -889,8 +1066,126 @@ function renderPagesNav() {
       clearTimeout(tab._clickTimer);
       startRenameTab(tab, nameSpan, i);
     });
-    nav.appendChild(tab);
+    tabsContainer.appendChild(tab);
   });
+  const overflowBtn = document.getElementById('pagesOverflowBtn');
+  if (overflowBtn) {
+    overflowBtn.onclick = (e) => {
+      e.stopPropagation();
+      if (pagesOverflowPanel) {
+        closePagesOverflowPanel();
+      } else {
+        openPagesOverflowPanel(overflowBtn);
+      }
+    };
+  }
+  observePagesTabVisibility();
+  setTimeout(updateOverflowBtn, 50);
+}
+
+function setupPagesNavResizeObserver() {
+  const tabsEl = document.getElementById('pagesNavTabs');
+  if (!tabsEl || !window.ResizeObserver) return;
+  if (pagesTabsResizeObserver) pagesTabsResizeObserver.disconnect();
+  pagesTabsResizeObserver = new ResizeObserver(() => updateOverflowBtn());
+  pagesTabsResizeObserver.observe(tabsEl);
+}
+
+function observePagesTabVisibility() {
+  const tabsEl = document.getElementById('pagesNavTabs');
+  if (!tabsEl || !window.IntersectionObserver) return;
+  if (pagesTabsIntersectionObserver) pagesTabsIntersectionObserver.disconnect();
+  pagesTabsIntersectionObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      entry.target.dataset.tabVisible = entry.intersectionRatio >= 0.99 ? '1' : '0';
+    });
+    updateOverflowBtn();
+  }, { root: tabsEl, threshold: [0.99] });
+  tabsEl.querySelectorAll('.page-tab').forEach(tab => pagesTabsIntersectionObserver.observe(tab));
+}
+
+function updateOverflowBtn() {
+  const tabsContainer = document.getElementById('pagesNavTabs');
+  const overflowBtn = document.getElementById('pagesOverflowBtn');
+  if (!tabsContainer || !overflowBtn) return;
+
+  const containerRight = tabsContainer.getBoundingClientRect().right;
+  let hasHidden = false;
+
+  tabsContainer.querySelectorAll('.page-tab').forEach(tab => {
+    const tabRight = tab.getBoundingClientRect().right;
+    if (tab.dataset.tabVisible === '0' || tabRight > containerRight + 2) {
+      hasHidden = true;
+    }
+  });
+
+  overflowBtn.style.display = hasHidden ? 'flex' : 'none';
+}
+
+function openPagesOverflowPanel(anchorEl) {
+  closePagesOverflowPanel(true);
+
+  const panel = document.createElement('div');
+  panel.className = 'pages-overflow-panel';
+
+  pages.forEach((p, i) => {
+    const item = document.createElement('button');
+    item.className = 'pages-overflow-item' + (i === currentPage ? ' active-page' : '');
+    item.type = 'button';
+    item.textContent = p.name;
+
+    if (p.tabBg && i !== currentPage) item.style.background = p.tabBg;
+    if (p.tabColor && i !== currentPage) item.style.color = p.tabColor;
+
+    item.addEventListener('click', () => {
+      panel.querySelectorAll('.pages-overflow-item').forEach(el => el.classList.remove('active-page'));
+      item.classList.add('active-page');
+      item.style.background = '';
+      item.style.color = '';
+
+      setTimeout(() => {
+        closePagesOverflowPanel();
+        switchPage(i);
+      }, 180);
+    });
+
+    panel.appendChild(item);
+  });
+
+  document.body.appendChild(panel);
+  pagesOverflowPanel = panel;
+
+  const rect = anchorEl.getBoundingClientRect();
+  panel.style.top = (rect.bottom + 6) + 'px';
+  panel.style.right = (window.innerWidth - rect.right) + 'px';
+
+  requestAnimationFrame(() => panel.classList.add('open'));
+
+  if (pagesOverflowOutsideHandler) {
+    document.removeEventListener('mousedown', pagesOverflowOutsideHandler);
+  }
+  pagesOverflowOutsideHandler = (e) => {
+    if (!panel.contains(e.target) && !anchorEl.contains(e.target)) {
+      closePagesOverflowPanel();
+    }
+  };
+  setTimeout(() => document.addEventListener('mousedown', pagesOverflowOutsideHandler), 10);
+}
+
+function closePagesOverflowPanel(immediate = false) {
+  if (!pagesOverflowPanel) return;
+  if (pagesOverflowOutsideHandler) {
+    document.removeEventListener('mousedown', pagesOverflowOutsideHandler);
+    pagesOverflowOutsideHandler = null;
+  }
+  pagesOverflowPanel.classList.remove('open');
+  const panel = pagesOverflowPanel;
+  pagesOverflowPanel = null;
+  if (immediate) {
+    panel.remove();
+  } else {
+    setTimeout(() => panel.remove(), 250);
+  }
 }
 
 function startRenameTab(tab, nameSpan, pageIndex) {
@@ -1117,10 +1412,99 @@ function fmt(cmd) {
   if (activeNoteEl) save();
 }
 
-function applyFont() {
+function buildFontMenu() {
+  const select = document.getElementById('fontFamily');
+  if (!select) return;
+
+  currentFont = select.value || currentFont;
+  const trigger = document.createElement('button');
+  trigger.className = 'font-menu-trigger';
+  trigger.id = 'fontMenuTrigger';
+  trigger.type = 'button';
+  trigger.title = 'Tipo de fuente';
+  trigger.textContent = currentFont;
+
+  select.replaceWith(trigger);
+
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleFontMenu(trigger);
+  });
+}
+
+function toggleFontMenu(trigger) {
+  if (fontMenuPanel && fontMenuPanel.classList.contains('open')) {
+    closeFontMenu();
+    return;
+  }
+  openFontMenu(trigger);
+}
+
+function openFontMenu(trigger) {
+  closeFontMenu(true);
+
+  const fonts = ['Segoe UI', 'Georgia', 'Courier New', 'Arial', 'Times New Roman', 'Verdana', 'Monospace'];
+  const panel = document.createElement('div');
+  panel.className = 'font-menu-panel';
+
+  fonts.forEach(font => {
+    const item = document.createElement('button');
+    item.className = 'font-menu-item' + (font === currentFont ? ' active-font' : '');
+    item.type = 'button';
+    item.textContent = font;
+    item.style.fontFamily = font;
+    item.addEventListener('click', () => {
+      currentFont = font;
+      document.getElementById('fontMenuTrigger').textContent = font;
+      applyFont(font);
+      closeFontMenu();
+    });
+    panel.appendChild(item);
+  });
+
+  document.body.appendChild(panel);
+  fontMenuPanel = panel;
+
+  const rect = trigger.getBoundingClientRect();
+  panel.style.top = (rect.bottom + 4) + 'px';
+  panel.style.left = rect.left + 'px';
+
+  requestAnimationFrame(() => panel.classList.add('open'));
+
+  if (fontMenuOutsideHandler) {
+    document.removeEventListener('mousedown', fontMenuOutsideHandler);
+  }
+  fontMenuOutsideHandler = (e) => {
+    if (!panel.contains(e.target) && !trigger.contains(e.target)) {
+      closeFontMenu();
+    }
+  };
+  setTimeout(() => document.addEventListener('mousedown', fontMenuOutsideHandler), 10);
+}
+
+function closeFontMenu(immediate = false) {
+  if (!fontMenuPanel) return;
+  if (fontMenuOutsideHandler) {
+    document.removeEventListener('mousedown', fontMenuOutsideHandler);
+    fontMenuOutsideHandler = null;
+  }
+  fontMenuPanel.classList.remove('open');
+  const panel = fontMenuPanel;
+  fontMenuPanel = null;
+  if (immediate) {
+    panel.remove();
+  } else {
+    setTimeout(() => panel.remove(), 250);
+  }
+}
+
+function applyFont(fontValue) {
   if (activeNoteEl) activeNoteEl.focus();
-  const font = document.getElementById('fontFamily').value;
-  document.execCommand('fontName', false, font);
+  const selectedFont = fontValue || currentFont || 'Segoe UI';
+  currentFont = selectedFont;
+  const trigger = document.getElementById('fontMenuTrigger');
+  if (trigger) trigger.textContent = selectedFont;
+  document.execCommand('fontName', false, selectedFont);
 }
 
 function applyFontSize() {
