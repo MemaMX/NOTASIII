@@ -621,7 +621,7 @@
     .pages-nav-tabs {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 3px;
       flex-wrap: nowrap;
       overflow-x: scroll;
       overflow-y: hidden;
@@ -914,12 +914,9 @@
       pointer-events: auto;
     }
     #userBalls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 22px;
-      justify-content: center;
-      max-width: 520px;
-      padding: 16px;
+      position: relative;
+      width: 420px;
+      height: 420px;
     }
 
     @keyframes floatBall {
@@ -940,6 +937,8 @@
     }
 
     .user-ball-wrapper {
+      position: absolute;
+      transform: translate(-50%, -50%);
       animation: floatBall 3.2s ease-in-out infinite, ballAppear 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
     }
     .user-ball {
@@ -981,27 +980,64 @@
     }
     .user-ball-edit-btn {
       position: absolute;
-      top: 4px;
-      right: 4px;
-      width: 20px;
-      height: 20px;
+      top: 2px;
+      right: 2px;
+      width: 16px;
+      height: 16px;
       border-radius: 50%;
       border: none;
-      background: transparent;
-      font-size: 11px;
+      background: rgba(80,80,80,0.18);
       cursor: pointer;
       display: none;
       align-items: center;
       justify-content: center;
-      line-height: 1;
       padding: 0;
       transition: background 0.15s;
+    }
+    .user-ball-edit-btn svg {
+      width: 9px;
+      height: 9px;
+      display: block;
+      color: var(--text);
     }
     .user-ball-wrapper:hover .user-ball-edit-btn {
       display: flex;
     }
     .user-ball-edit-btn:hover {
-      background: rgba(128,128,128,0.15);
+      background: rgba(128,128,128,0.25);
+    }
+    .user-ball-del-btn {
+      position: absolute;
+      bottom: 2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(220,80,80,0.18);
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      font-size: 9px;
+      line-height: 1;
+      color: rgba(220,80,80,0.9);
+      transition: background 0.15s;
+    }
+    .user-ball-wrapper:hover .user-ball-del-btn {
+      display: flex;
+    }
+    .user-ball-del-btn:hover {
+      background: rgba(220,80,80,0.32);
+    }
+    :root[data-theme="dark"] .user-ball {
+      background: #3a3a3a;
+      border-color: #777;
+    }
+    :root[data-theme="dark"] .user-ball-name {
+      color: #e8e8e8;
     }
     .user-ball.user-ball-action {
       background: var(--surface);
@@ -1087,6 +1123,7 @@
 </div>
 
 <div class="modal-overlay" id="newPageModal">
+  <div class="modal">
     <h3>Nueva Hoja</h3>
     <label>
       <input type="checkbox" id="keepDropdownsCheck" />
@@ -1248,53 +1285,92 @@ function closeUserSelector() {
 function renderUserBalls() {
   const container = document.getElementById('userBalls');
   container.innerHTML = '';
-  users.forEach((user, i) => {
+
+  // Build list of all items: [currentPage ball, ...user balls, add ball]
+  const items = [];
+
+  // First ball: current active page (no name, always active)
+  items.push({ type: 'page' });
+
+  // User balls (capped so total stays ≤ 15)
+  const maxUsers = 14;
+  const visibleUsers = users.slice(0, maxUsers);
+  visibleUsers.forEach(user => items.push({ type: 'user', user }));
+
+  // "+" add ball only if under the cap
+  if (users.length < maxUsers) items.push({ type: 'add' });
+
+  const total = items.length;
+  const cx = 210, cy = 210;
+  const innerR = 110, outerR = 190;
+
+  items.forEach((item, i) => {
+    // Determine ring position
+    let x, y;
+    if (i < 6) {
+      const angle = (2 * Math.PI * i) / Math.min(6, total) - Math.PI / 2;
+      x = cx + innerR * Math.cos(angle);
+      y = cy + innerR * Math.sin(angle);
+    } else {
+      const outerIdx = i - 6;
+      const outerCount = Math.max(total - 6, 1);
+      const angle = (2 * Math.PI * outerIdx) / outerCount - Math.PI / 2;
+      x = cx + outerR * Math.cos(angle);
+      y = cy + outerR * Math.sin(angle);
+    }
+
     const wrapper = document.createElement('div');
     wrapper.className = 'user-ball-wrapper';
-    wrapper.style.animationDelay = (i * 0.25) + 's';
-    const ball = document.createElement('div');
-    ball.className = 'user-ball' + (user.id === activeUserId ? ' user-ball-active' : '');
-    ball.dataset.userId = user.id;
-    const nameEl = document.createElement('span');
-    nameEl.className = 'user-ball-name';
-    nameEl.textContent = user.name.slice(0, 9);
-    const editBtn = document.createElement('button');
-    editBtn.className = 'user-ball-edit-btn';
-    editBtn.innerHTML = '✏️';
-    editBtn.title = 'Editar nombre';
-    editBtn.addEventListener('click', (e) => { e.stopPropagation(); expandBallForEdit(ball, user); });
-    ball.appendChild(nameEl);
-    ball.appendChild(editBtn);
-    ball.addEventListener('click', () => { if (!ball.classList.contains('user-ball-expanded')) selectUser(user.id, ball); });
-    wrapper.appendChild(ball);
+    wrapper.style.left = x + 'px';
+    wrapper.style.top = y + 'px';
+    wrapper.style.animationDelay = (i * 0.22) + 's';
+
+    if (item.type === 'page') {
+      // First ball: current page representation
+      const ball = document.createElement('div');
+      ball.className = 'user-ball user-ball-active';
+      ball.title = pages[currentPage] ? pages[currentPage].name : 'Hoja actual';
+      wrapper.appendChild(ball);
+
+    } else if (item.type === 'user') {
+      const user = item.user;
+      const ball = document.createElement('div');
+      ball.className = 'user-ball' + (user.id === activeUserId ? ' user-ball-active' : '');
+      ball.dataset.userId = user.id;
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'user-ball-name';
+      nameEl.textContent = user.name.slice(0, 9);
+
+      const editBtn = document.createElement('button');
+      editBtn.className = 'user-ball-edit-btn';
+      editBtn.title = 'Editar nombre';
+      editBtn.innerHTML = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 1.5 L10.5 3.5 L3.5 10.5 L1 11 L1.5 8.5 Z"/></svg>';
+      editBtn.addEventListener('click', (e) => { e.stopPropagation(); expandBallForEdit(ball, user); });
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'user-ball-del-btn';
+      delBtn.title = 'Eliminar perfil';
+      delBtn.textContent = '×';
+      delBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteUser(user.id); });
+
+      ball.appendChild(nameEl);
+      ball.appendChild(editBtn);
+      ball.appendChild(delBtn);
+      ball.addEventListener('click', () => { if (!ball.classList.contains('user-ball-expanded')) selectUser(user.id, ball); });
+      wrapper.appendChild(ball);
+
+    } else if (item.type === 'add') {
+      const addBall = document.createElement('div');
+      addBall.className = 'user-ball user-ball-action';
+      addBall.title = 'Agregar usuario';
+      addBall.innerHTML = '<span class="user-ball-icon">+</span>';
+      addBall.addEventListener('click', () => { if (!addBall.classList.contains('user-ball-expanded')) expandBallForAdd(addBall); });
+      wrapper.appendChild(addBall);
+    }
+
     container.appendChild(wrapper);
   });
-
-  // "+" add ball
-  const addWrapper = document.createElement('div');
-  addWrapper.className = 'user-ball-wrapper';
-  addWrapper.style.animationDelay = (users.length * 0.25) + 's';
-  const addBall = document.createElement('div');
-  addBall.className = 'user-ball user-ball-action';
-  addBall.title = 'Agregar usuario';
-  addBall.innerHTML = '<span class="user-ball-icon">+</span>';
-  addBall.addEventListener('click', () => { if (!addBall.classList.contains('user-ball-expanded')) expandBallForAdd(addBall); });
-  addWrapper.appendChild(addBall);
-  container.appendChild(addWrapper);
-
-  // "−" delete ball (only if users exist and one is active)
-  if (users.length > 0) {
-    const delWrapper = document.createElement('div');
-    delWrapper.className = 'user-ball-wrapper';
-    delWrapper.style.animationDelay = ((users.length + 1) * 0.25) + 's';
-    const delBall = document.createElement('div');
-    delBall.className = 'user-ball user-ball-action user-ball-del';
-    delBall.title = 'Eliminar usuario activo';
-    delBall.innerHTML = '<span class="user-ball-icon">−</span>';
-    delBall.addEventListener('click', () => deleteActiveUser());
-    delWrapper.appendChild(delBall);
-    container.appendChild(delWrapper);
-  }
 }
 
 function buildBallEditUI(ballEl, inputVal, placeholder, onSave, onCancel) {
@@ -1380,22 +1456,28 @@ function loadUserData() {
   currentPage = 0;
 }
 
-function deleteActiveUser() {
-  if (!activeUserId) { alert('Selecciona un usuario primero.'); return; }
-  const idx = users.findIndex(u => u.id === activeUserId);
+function deleteUser(userId) {
+  const idx = users.findIndex(u => u.id === userId);
   if (idx < 0) return;
-  if (!confirm('¿Eliminar el usuario "' + users[idx].name + '" y todos sus datos?')) return;
-  localStorage.removeItem(getDataKey());
+  const dataKey = 'notasapp_v2_usuario_' + encodeURIComponent(users[idx].name);
+  localStorage.removeItem(dataKey);
   users.splice(idx, 1);
   saveUsers();
-  activeUserId = users.length > 0 ? users[0].id : null;
-  if (activeUserId) localStorage.setItem('notasapp_activeUser', activeUserId);
-  else localStorage.removeItem('notasapp_activeUser');
-  loadUserData();
-  updateUserBtn();
-  normalizeDropdownData();
-  renderAll();
+  if (activeUserId === userId) {
+    activeUserId = users.length > 0 ? users[0].id : null;
+    if (activeUserId) localStorage.setItem('notasapp_activeUser', activeUserId);
+    else localStorage.removeItem('notasapp_activeUser');
+    loadUserData();
+    updateUserBtn();
+    normalizeDropdownData();
+    renderAll();
+  }
   renderUserBalls();
+}
+
+function deleteActiveUser() {
+  if (!activeUserId) return;
+  deleteUser(activeUserId);
 }
 
 function updateUserBtn() {
