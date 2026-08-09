@@ -309,7 +309,7 @@
     .dropdowns-list {
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 8px;
       padding: 0 4px;
     }
 
@@ -729,7 +729,7 @@
       color: var(--text-muted);
       font-size: 13px;
       cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
       user-select: none;
       display: flex;
       align-items: center;
@@ -867,12 +867,226 @@
       padding: 40px 0 20px;
     }
 
+    /* ─── User Button ─────────────────────────────────────────────── */
+    .user-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+      flex-shrink: 0;
+    }
+    .user-btn:hover {
+      background: var(--surface2);
+      color: var(--accent);
+      border-color: var(--accent);
+      transform: scale(1.06);
+    }
+    .user-btn.user-btn-active {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ─── User Selector Overlay ───────────────────────────────────── */
+    #userSelectorOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 5000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      background: transparent;
+      backdrop-filter: blur(0px);
+      -webkit-backdrop-filter: blur(0px);
+      transition: background 0.3s ease, backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease;
+    }
+    #userSelectorOverlay.open {
+      background: rgba(0,0,0,0.28);
+      backdrop-filter: blur(7px);
+      -webkit-backdrop-filter: blur(7px);
+      pointer-events: auto;
+    }
+    #userBalls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 22px;
+      justify-content: center;
+      max-width: 520px;
+      padding: 16px;
+    }
+
+    @keyframes floatBall {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-9px); }
+    }
+    @keyframes ballBounce {
+      0%   { transform: scale(1); }
+      30%  { transform: scale(1.18); }
+      55%  { transform: scale(0.92); }
+      75%  { transform: scale(1.08); }
+      90%  { transform: scale(0.97); }
+      100% { transform: scale(1); }
+    }
+    @keyframes ballAppear {
+      from { opacity: 0; transform: scale(0.7) translateY(12px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .user-ball-wrapper {
+      animation: floatBall 3.2s ease-in-out infinite, ballAppear 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    .user-ball {
+      width: 82px;
+      height: 82px;
+      border-radius: 50%;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      box-shadow: 0 4px 18px rgba(0,0,0,0.13);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      overflow: hidden;
+    }
+    .user-ball-wrapper:hover .user-ball {
+      transform: scale(1.1);
+      box-shadow: 0 8px 28px rgba(0,0,0,0.22);
+    }
+    .user-ball.user-ball-active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(27,129,112,0.22), 0 4px 18px rgba(0,0,0,0.13);
+    }
+    .user-ball.user-ball-bounce {
+      animation: ballBounce 0.55s ease forwards;
+    }
+    .user-ball-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+      text-align: center;
+      word-break: break-all;
+      line-height: 1.3;
+      max-width: 70px;
+      pointer-events: none;
+    }
+    .user-ball-edit-btn {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      font-size: 11px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      padding: 0;
+      transition: background 0.15s;
+    }
+    .user-ball-wrapper:hover .user-ball-edit-btn {
+      display: flex;
+    }
+    .user-ball-edit-btn:hover {
+      background: rgba(128,128,128,0.15);
+    }
+    .user-ball.user-ball-action {
+      background: var(--surface);
+      border-style: dashed;
+    }
+    .user-ball.user-ball-del {
+      border-color: rgba(220,80,80,0.4);
+    }
+    .user-ball-icon {
+      font-size: 26px;
+      font-weight: 300;
+      color: var(--text-muted);
+      line-height: 1;
+      pointer-events: none;
+    }
+    /* Expanded ball for editing/adding */
+    .user-ball.user-ball-expanded {
+      width: 140px;
+      height: 140px;
+      border-radius: 24px;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px 10px;
+      cursor: default;
+      animation: none !important;
+      transition: width 0.3s ease, height 0.3s ease, border-radius 0.3s ease;
+    }
+    .user-ball-wrapper:has(.user-ball-expanded) {
+      animation: ballAppear 0.3s ease both;
+    }
+    .user-ball-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13px;
+      padding: 4px 8px;
+      font-family: inherit;
+      outline: none;
+      text-align: center;
+    }
+    .user-ball-input:focus {
+      border-color: var(--accent);
+    }
+    .user-ball-btns {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+    }
+    .user-ball-confirm-btn,
+    .user-ball-cancel-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, border-color 0.15s;
+      padding: 0;
+    }
+    .user-ball-confirm-btn:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .user-ball-cancel-btn:hover {
+      background: rgba(220,80,80,0.15);
+      border-color: rgba(220,80,80,0.5);
+    }
+    .user-svg-icon { pointer-events: none; }
   </style>
 </head>
 <body>
 
+<div id="userSelectorOverlay">
+  <div id="userBalls"></div>
+</div>
+
 <div class="modal-overlay" id="newPageModal">
-  <div class="modal">
     <h3>Nueva Hoja</h3>
     <label>
       <input type="checkbox" id="keepDropdownsCheck" />
@@ -891,6 +1105,7 @@
       <span class="topbar-title">Notas</span>
       <div class="topbar-right">
         <button class="accent-btn" id="accentBtn" title="Colores de interfaz" type="button"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="8" cy="10" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="10" r="1.5" fill="currentColor" stroke="none"/><path d="M12 19c-1.5 0-4-1.5-4-4 0-1 .5-2 2-2h4c1.5 0 2 1 2 2 0 2.5-2.5 4-4 4z"/></svg></button>
+        <button class="user-btn" id="userBtn" title="Usuarios" type="button" onclick="openUserSelector()"><svg class="user-svg-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></button>
         <div class="toggle-switch" title="Modo claro/oscuro">
           <label class="switch-label">
             <input type="checkbox" class="checkbox" id="themeToggle" />
@@ -976,6 +1191,222 @@ let pagesTabsResizeObserver = null;
 let pagesTabsIntersectionObserver = null;
 const DEFAULT_ACCENT = 'rgb(27,129,112)';
 
+// ─── USER SYSTEM ─────────────────────────────────────────────────────────────
+let users = [];
+let activeUserId = null;
+let userSelectorOpen = false;
+
+function loadUsers() {
+  try {
+    users = JSON.parse(localStorage.getItem('notasapp_users') || '[]');
+    activeUserId = localStorage.getItem('notasapp_activeUser') || null;
+    if (activeUserId && !users.find(u => u.id === activeUserId)) {
+      activeUserId = null;
+      localStorage.removeItem('notasapp_activeUser');
+    }
+  } catch(e) { users = []; activeUserId = null; }
+}
+
+function saveUsers() {
+  localStorage.setItem('notasapp_users', JSON.stringify(users));
+}
+
+function getDataKey() {
+  if (!activeUserId) return 'notasapp_v2';
+  const user = users.find(u => u.id === activeUserId);
+  if (!user) return 'notasapp_v2';
+  return 'notasapp_v2_usuario_' + encodeURIComponent(user.name);
+}
+
+function getGASKey() {
+  if (!activeUserId) return 'notasapp_v2';
+  const user = users.find(u => u.id === activeUserId);
+  if (!user) return 'notasapp_v2';
+  return 'notasapp_v2_usuario_' + user.name;
+}
+
+function openUserSelector() {
+  if (userSelectorOpen) { closeUserSelector(); return; }
+  userSelectorOpen = true;
+  const overlay = document.getElementById('userSelectorOverlay');
+  overlay.classList.add('open');
+  renderUserBalls();
+  setTimeout(() => {
+    overlay.addEventListener('pointerdown', function handler(e) {
+      if (e.target === overlay) { closeUserSelector(); overlay.removeEventListener('pointerdown', handler); }
+    });
+  }, 50);
+}
+
+function closeUserSelector() {
+  userSelectorOpen = false;
+  const overlay = document.getElementById('userSelectorOverlay');
+  overlay.classList.remove('open');
+  setTimeout(() => { const b = document.getElementById('userBalls'); if (b) b.innerHTML = ''; }, 350);
+}
+
+function renderUserBalls() {
+  const container = document.getElementById('userBalls');
+  container.innerHTML = '';
+  users.forEach((user, i) => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'user-ball-wrapper';
+    wrapper.style.animationDelay = (i * 0.25) + 's';
+    const ball = document.createElement('div');
+    ball.className = 'user-ball' + (user.id === activeUserId ? ' user-ball-active' : '');
+    ball.dataset.userId = user.id;
+    const nameEl = document.createElement('span');
+    nameEl.className = 'user-ball-name';
+    nameEl.textContent = user.name.slice(0, 9);
+    const editBtn = document.createElement('button');
+    editBtn.className = 'user-ball-edit-btn';
+    editBtn.innerHTML = '✏️';
+    editBtn.title = 'Editar nombre';
+    editBtn.addEventListener('click', (e) => { e.stopPropagation(); expandBallForEdit(ball, user); });
+    ball.appendChild(nameEl);
+    ball.appendChild(editBtn);
+    ball.addEventListener('click', () => { if (!ball.classList.contains('user-ball-expanded')) selectUser(user.id, ball); });
+    wrapper.appendChild(ball);
+    container.appendChild(wrapper);
+  });
+
+  // "+" add ball
+  const addWrapper = document.createElement('div');
+  addWrapper.className = 'user-ball-wrapper';
+  addWrapper.style.animationDelay = (users.length * 0.25) + 's';
+  const addBall = document.createElement('div');
+  addBall.className = 'user-ball user-ball-action';
+  addBall.title = 'Agregar usuario';
+  addBall.innerHTML = '<span class="user-ball-icon">+</span>';
+  addBall.addEventListener('click', () => { if (!addBall.classList.contains('user-ball-expanded')) expandBallForAdd(addBall); });
+  addWrapper.appendChild(addBall);
+  container.appendChild(addWrapper);
+
+  // "−" delete ball (only if users exist and one is active)
+  if (users.length > 0) {
+    const delWrapper = document.createElement('div');
+    delWrapper.className = 'user-ball-wrapper';
+    delWrapper.style.animationDelay = ((users.length + 1) * 0.25) + 's';
+    const delBall = document.createElement('div');
+    delBall.className = 'user-ball user-ball-action user-ball-del';
+    delBall.title = 'Eliminar usuario activo';
+    delBall.innerHTML = '<span class="user-ball-icon">−</span>';
+    delBall.addEventListener('click', () => deleteActiveUser());
+    delWrapper.appendChild(delBall);
+    container.appendChild(delWrapper);
+  }
+}
+
+function buildBallEditUI(ballEl, inputVal, placeholder, onSave, onCancel) {
+  ballEl.classList.add('user-ball-expanded');
+  ballEl.innerHTML = '';
+  const input = document.createElement('input');
+  input.className = 'user-ball-input';
+  input.placeholder = placeholder;
+  input.value = inputVal;
+  input.maxLength = 14;
+  const btns = document.createElement('div');
+  btns.className = 'user-ball-btns';
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'user-ball-confirm-btn';
+  saveBtn.type = 'button';
+  saveBtn.innerHTML = '✓';
+  saveBtn.title = 'Guardar';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'user-ball-cancel-btn';
+  cancelBtn.type = 'button';
+  cancelBtn.innerHTML = '🗑';
+  cancelBtn.title = 'Cancelar';
+  btns.appendChild(saveBtn);
+  btns.appendChild(cancelBtn);
+  ballEl.appendChild(input);
+  ballEl.appendChild(btns);
+  saveBtn.addEventListener('click', (e) => { e.stopPropagation(); onSave(input.value.trim()); });
+  cancelBtn.addEventListener('click', (e) => { e.stopPropagation(); onCancel(); });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); onSave(input.value.trim()); }
+    if (e.key === 'Escape') onCancel();
+    e.stopPropagation();
+  });
+  input.addEventListener('click', (e) => e.stopPropagation());
+  setTimeout(() => input.focus(), 60);
+}
+
+function expandBallForAdd(ballEl) {
+  buildBallEditUI(ballEl, '', 'Nombre...', (name) => {
+    if (!name) { ballEl.classList.remove('user-ball-expanded'); renderUserBalls(); return; }
+    users.push({ id: uid(), name });
+    saveUsers();
+    renderUserBalls();
+  }, () => renderUserBalls());
+}
+
+function expandBallForEdit(ballEl, user) {
+  buildBallEditUI(ballEl, user.name, 'Nombre...', (name) => {
+    if (!name) { renderUserBalls(); return; }
+    user.name = name;
+    saveUsers();
+    renderUserBalls();
+  }, () => renderUserBalls());
+}
+
+function selectUser(userId, ballEl) {
+  ballEl.classList.add('user-ball-bounce');
+  setTimeout(() => {
+    activeUserId = userId;
+    localStorage.setItem('notasapp_activeUser', userId);
+    loadUserData();
+    updateUserBtn();
+    closeUserSelector();
+    normalizeDropdownData();
+    renderAll();
+    loadFromGAS();
+  }, 480);
+}
+
+function loadUserData() {
+  const key = getDataKey();
+  const saved = localStorage.getItem(key);
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      pages = data.pages || [];
+      currentPage = data.currentPage || 0;
+      if (currentPage >= pages.length) currentPage = 0;
+      return;
+    } catch(e) {}
+  }
+  pages = [{ id: uid(), name: 'Hoja 1', dropdowns: [] }];
+  currentPage = 0;
+}
+
+function deleteActiveUser() {
+  if (!activeUserId) { alert('Selecciona un usuario primero.'); return; }
+  const idx = users.findIndex(u => u.id === activeUserId);
+  if (idx < 0) return;
+  if (!confirm('¿Eliminar el usuario "' + users[idx].name + '" y todos sus datos?')) return;
+  localStorage.removeItem(getDataKey());
+  users.splice(idx, 1);
+  saveUsers();
+  activeUserId = users.length > 0 ? users[0].id : null;
+  if (activeUserId) localStorage.setItem('notasapp_activeUser', activeUserId);
+  else localStorage.removeItem('notasapp_activeUser');
+  loadUserData();
+  updateUserBtn();
+  normalizeDropdownData();
+  renderAll();
+  renderUserBalls();
+}
+
+function updateUserBtn() {
+  const btn = document.getElementById('userBtn');
+  if (!btn) return;
+  const user = users.find(u => u.id === activeUserId);
+  if (user) { btn.title = 'Usuario: ' + user.name; btn.classList.add('user-btn-active'); }
+  else { btn.title = 'Usuarios'; btn.classList.remove('user-btn-active'); }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ─── GOOGLE SHEETS SYNC ───────────────────────────────────────────────────
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxtXw0RnsEHUKLMnLG_F7MrbfW1JrQn0-ysvgkHU2uF8d_d8r0HmI4LL4L_vTgTp7Fy/exec';
 let syncTimeout = null;
@@ -984,13 +1415,17 @@ let gasAvailable = true;
 
 async function loadFromGAS() {
   try {
-    const res = await fetch(GAS_URL, {
+    const gasKey = getGASKey();
+    const url = gasKey !== 'notasapp_v2'
+      ? GAS_URL + '?key=' + encodeURIComponent(gasKey)
+      : GAS_URL;
+    const res = await fetch(url, {
       method: 'GET'
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const json = await res.json();
     if (json.ok && json.data) {
-      const local = localStorage.getItem('notasapp_v2');
+      const local = localStorage.getItem(getDataKey());
       if (!local) {
         pages = json.data.pages || [];
         currentPage = json.data.currentPage || 0;
@@ -1025,7 +1460,7 @@ function saveToGAS(data) {
       await fetch(GAS_URL, {
         method: 'POST',
         body: JSON.stringify({
-          key: 'notasapp_v2',
+          key: getGASKey(),
           value: data
         })
       });
@@ -1037,8 +1472,11 @@ function saveToGAS(data) {
 }
 
 async function init() {
+  // 0. Load users
+  loadUsers();
+
   // 1. Cargar desde localStorage primero (rápido)
-  const saved = localStorage.getItem('notasapp_v2');
+  const saved = localStorage.getItem(getDataKey());
   if (saved) {
     try {
       const data = JSON.parse(saved);
@@ -1075,6 +1513,7 @@ async function init() {
   renderAll();
   buildFontMenu();
   setupPagesNavResizeObserver();
+  updateUserBtn();
 }
 
 function save() {
@@ -1084,7 +1523,7 @@ function save() {
     currentPage,
     _updatedAt: Date.now()
   };
-  localStorage.setItem('notasapp_v2', JSON.stringify(data));
+  localStorage.setItem(getDataKey(), JSON.stringify(data));
   saveToGAS(data);
 }
 
@@ -2049,18 +2488,20 @@ function switchPage(i) {
   if (i === currentPage) return;
   syncCurrentPageFromDOM();
   const list = document.getElementById('dropdownsList');
-  list.style.transition = 'opacity 0.15s';
+  list.style.transition = 'opacity 0.15s ease';
   list.style.opacity = '0';
   setTimeout(() => {
     currentPage = i;
-    localStorage.setItem('notasapp_v2', JSON.stringify({ pages, currentPage }));
+    save();
     renderAll();
-    setTimeout(() => {
-      updateOverflowBtn();
-      scrollToActiveTab();
-    }, 30);
-    list.style.opacity = '1';
-  }, 150);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      list.style.opacity = '1';
+      setTimeout(() => {
+        updateOverflowBtn();
+        scrollToActiveTab();
+      }, 30);
+    }));
+  }, 155);
 }
 
 function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
