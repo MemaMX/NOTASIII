@@ -588,6 +588,13 @@
       transition: background 0.3s ease;
     }
 
+    input.search-input-highlight {
+      background-color: color-mix(in srgb, var(--accent) 15%, transparent) !important;
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent) !important;
+      transition: all 0.3s ease;
+    }
+
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -1891,6 +1898,14 @@ function applyGlobalSearch(rawQuery) {
 
   const firstInputMatch = findFirstDropdownTitleMatch(query);
   const matchingDropdownIds = new Set(firstInputMatch ? [firstInputMatch.closest('.dropdown-wrap')?.dataset.id] : []);
+
+  document.querySelectorAll('.dd-title').forEach((input) => {
+    if ((input.value || '').toLowerCase().includes(query.toLowerCase())) {
+      input.classList.add('search-input-highlight');
+      const wrap = input.closest('.dropdown-wrap');
+      if (wrap?.dataset.id) matchingDropdownIds.add(wrap.dataset.id);
+    }
+  });
   const regex = new RegExp(escapeRegExp(query), 'gi');
   let firstResult = null;
 
@@ -1980,6 +1995,9 @@ function clearSearchHighlights() {
   });
   document.querySelectorAll('.search-line-highlight').forEach((el) => {
     el.classList.remove('search-line-highlight');
+  });
+  document.querySelectorAll('input.search-input-highlight').forEach((el) => {
+    el.classList.remove('search-input-highlight');
   });
 }
 
