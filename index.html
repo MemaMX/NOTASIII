@@ -309,7 +309,7 @@
     .dropdowns-list {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 4px;
       padding: 0 4px;
     }
 
@@ -1299,6 +1299,15 @@ function loadUsers() {
   try {
     users = JSON.parse(localStorage.getItem('notasapp_users') || '[]');
     activeUserId = localStorage.getItem('notasapp_activeUser') || null;
+    if (!Array.isArray(users)) users = [];
+    if (users.length === 0) {
+      const defaultUser = { id: uid(), name: 'Emma' };
+      users = [defaultUser];
+      activeUserId = defaultUser.id;
+      saveUsers();
+      localStorage.setItem('notasapp_activeUser', activeUserId);
+      return;
+    }
     if (activeUserId && !users.find(u => u.id === activeUserId)) {
       activeUserId = null;
       localStorage.removeItem('notasapp_activeUser');
