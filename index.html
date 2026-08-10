@@ -89,6 +89,26 @@
     }
     .topbar-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; position: relative; }
 
+    /* From Uiverse.io by reglobby */ 
+    .input {
+      border: 2px solid transparent;
+      width: 15em;
+      height: 2.5em;
+      padding-left: 0.8em;
+      outline: none;
+      overflow: hidden;
+      background-color: #F3F3F3;
+      border-radius: 10px;
+      transition: all 0.5s;
+    }
+
+    .input:hover,
+    .input:focus {
+      border: 2px solid #4A9DEC;
+      box-shadow: 0px 0px 0px 7px rgb(74, 157, 236, 20%);
+      background-color: white;
+    }
+
     .toggle-switch {
       position: relative;
       width: 70px;
@@ -552,6 +572,14 @@
       overflow: hidden;
       line-height: 1.6;
       white-space: pre-wrap;
+    }
+
+    mark.search-highlight {
+      background-color: var(--accent);
+      color: white;
+      border-radius: 3px;
+      padding: 0 2px;
+      transition: background 0.3s ease;
     }
 
     .modal-overlay {
@@ -1194,6 +1222,8 @@
       <span class="topbar-title">Notas</span>
       <div class="topbar-right">
         <button class="accent-btn" id="accentBtn" title="Colores de interfaz" type="button"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="8" cy="10" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="10" r="1.5" fill="currentColor" stroke="none"/><path d="M12 19c-1.5 0-4-1.5-4-4 0-1 .5-2 2-2h4c1.5 0 2 1 2 2 0 2.5-2.5 4-4 4z"/></svg></button>
+        <!-- From Uiverse.io by reglobby --> 
+        <input class="input" id="globalSearch" placeholder="Buscar...">
         <button class="user-btn" id="userBtn" title="Usuarios" type="button" onclick="openUserSelector()"><svg class="user-svg-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></button>
         <div class="toggle-switch" title="Modo claro/oscuro">
           <label class="switch-label">
@@ -1273,6 +1303,7 @@ let globalPopoverCleanup = null;
 let checklistActive = false;
 let fontMenuPanel = null;
 let currentFont = 'Segoe UI';
+const globalSearchOpenState = new Map();
 let fontMenuOutsideHandler = null;
 let pagesOverflowPanel = null;
 let pagesOverflowOutsideHandler = null;
@@ -1785,6 +1816,7 @@ async function init() {
   document.getElementById('themeToggle').checked = savedTheme === 'light';
   applySavedAccent(savedTheme);
   setupAccentButton();
+  setupGlobalSearch();
   setupScrollableHeaderShadow();
   renderAll();
   buildFontMenu();
@@ -1814,7 +1846,7 @@ function syncCurrentPageFromDOM() {
     const noteEl = wrap.querySelector('.note-area');
     const stateEl = wrap.querySelector('.dd-state');
     if (titleEl) dd.title = titleEl.value;
-    if (noteEl) dd.content = noteEl.innerHTML;
+    if (noteEl) dd.content = stripSearchHighlightsFromHtml(noteEl.innerHTML);
     if (stateEl) dd.open = stateEl.checked;
   });
 }
@@ -1825,6 +1857,160 @@ function renderAll() {
   renderPagesNav();
   renderDropdowns();
   updateHeaderScrollState();
+  refreshGlobalSearch();
+}
+
+function setupGlobalSearch() {
+  const input = document.getElementById('globalSearch');
+  if (!input || input.dataset.bound === '1') return;
+  input.dataset.bound = '1';
+  input.addEventListener('input', () => refreshGlobalSearch());
+}
+
+function refreshGlobalSearch() {
+  const input = document.getElementById('globalSearch');
+  if (!input) return;
+  applyGlobalSearch(input.value || '');
+}
+
+function applyGlobalSearch(rawQuery) {
+  const query = rawQuery.trim();
+  clearSearchHighlights();
+  restoreSearchExpandedDropdowns(false);
+
+  if (!query) {
+    restoreSearchExpandedDropdowns(true);
+    return;
+  }
+
+  const firstInputMatch = findFirstDropdownTitleMatch(query);
+  const matchingDropdownIds = new Set(firstInputMatch ? [firstInputMatch.closest('.dropdown-wrap')?.dataset.id] : []);
+  const regex = new RegExp(escapeRegExp(query), 'gi');
+  let firstResult = null;
+
+  getSearchRoots().forEach((root) => {
+    collectSearchTextNodes(root).forEach((node) => {
+      if (!regex.test(node.textContent)) return;
+      regex.lastIndex = 0;
+      const dropdownWrap = node.parentElement && node.parentElement.closest('.dropdown-wrap');
+      if (dropdownWrap?.dataset.id) matchingDropdownIds.add(dropdownWrap.dataset.id);
+      const firstMark = highlightTextNode(node, regex);
+      if (!firstResult && firstMark) firstResult = firstMark;
+    });
+  });
+
+  matchingDropdownIds.forEach((id) => {
+    if (!id) return;
+    const wrap = document.querySelector(`.dropdown-wrap[data-id="${id}"]`);
+    if (!wrap) return;
+    rememberDropdownOpenState(wrap);
+    setDropdownOpenState(wrap, true);
+  });
+
+  const target = firstResult || firstInputMatch;
+  if (target) {
+    requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    });
+  }
+}
+
+function getSearchRoots() {
+  return ['pagesNavTabs', 'dropdownsList']
+    .map(id => document.getElementById(id))
+    .filter(Boolean);
+}
+
+function collectSearchTextNodes(root) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      if (!node.textContent || !node.textContent.trim()) return NodeFilter.FILTER_REJECT;
+      const parent = node.parentElement;
+      if (!parent) return NodeFilter.FILTER_REJECT;
+      if (parent.closest('mark.search-highlight')) return NodeFilter.FILTER_REJECT;
+      if (parent.closest('script, style, .toolbar, .topbar-right input, .pages-overflow-panel')) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
+
+  const nodes = [];
+  let current;
+  while ((current = walker.nextNode())) nodes.push(current);
+  return nodes;
+}
+
+function highlightTextNode(node, regex) {
+  const text = node.textContent;
+  regex.lastIndex = 0;
+  if (!regex.test(text)) return null;
+  regex.lastIndex = 0;
+
+  const fragment = document.createDocumentFragment();
+  let lastIndex = 0;
+  let firstMark = null;
+
+  text.replace(regex, (match, offset) => {
+    if (offset > lastIndex) fragment.appendChild(document.createTextNode(text.slice(lastIndex, offset)));
+    const mark = document.createElement('mark');
+    mark.className = 'search-highlight';
+    mark.textContent = match;
+    fragment.appendChild(mark);
+    if (!firstMark) firstMark = mark;
+    lastIndex = offset + match.length;
+    return match;
+  });
+
+  if (lastIndex < text.length) fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+  node.parentNode.replaceChild(fragment, node);
+  return firstMark;
+}
+
+function clearSearchHighlights() {
+  document.querySelectorAll('mark.search-highlight').forEach((mark) => {
+    mark.replaceWith(document.createTextNode(mark.textContent));
+  });
+}
+
+function stripSearchHighlightsFromHtml(html) {
+  if (!html || !html.includes('search-highlight')) return html;
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  tmp.querySelectorAll('mark.search-highlight').forEach((mark) => {
+    mark.replaceWith(document.createTextNode(mark.textContent));
+  });
+  return tmp.innerHTML;
+}
+
+function rememberDropdownOpenState(wrap) {
+  if (!wrap?.dataset.id || globalSearchOpenState.has(wrap.dataset.id)) return;
+  const stateInput = wrap.querySelector('.dd-state');
+  globalSearchOpenState.set(wrap.dataset.id, !!stateInput?.checked);
+}
+
+function restoreSearchExpandedDropdowns(clearState = true) {
+  globalSearchOpenState.forEach((open, id) => {
+    const wrap = document.querySelector(`.dropdown-wrap[data-id="${id}"]`);
+    if (wrap) setDropdownOpenState(wrap, open);
+  });
+  if (clearState) globalSearchOpenState.clear();
+}
+
+function setDropdownOpenState(wrap, open) {
+  const stateInput = wrap.querySelector('.dd-state');
+  const arrow = wrap.querySelector('.dd-arrow');
+  if (stateInput) stateInput.checked = open;
+  if (arrow) arrow.style.transform = open ? 'rotate(90deg)' : '';
+}
+
+function findFirstDropdownTitleMatch(query) {
+  const normalizedQuery = query.toLowerCase();
+  return Array.from(document.querySelectorAll('.dd-title')).find((input) =>
+    (input.value || '').toLowerCase().includes(normalizedQuery)
+  ) || null;
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function renderPagesNav() {
@@ -2177,8 +2363,8 @@ function buildDropdownEl(dd, index) {
   noteArea.spellcheck = true;
   noteArea.innerHTML = dd.content || '';
   noteArea.addEventListener('focus', () => { activeNoteEl = noteArea; });
-  noteArea.addEventListener('blur', () => { dd.content = noteArea.innerHTML; save(); });
-  noteArea.addEventListener('input', () => { dd.content = noteArea.innerHTML; });
+  noteArea.addEventListener('blur', () => { dd.content = stripSearchHighlightsFromHtml(noteArea.innerHTML); save(); });
+  noteArea.addEventListener('input', () => { dd.content = stripSearchHighlightsFromHtml(noteArea.innerHTML); });
   noteArea.addEventListener('keydown', (e) => handlePipeRule(e, noteArea, dd));
 
   const clOverlay = document.createElement('div');
