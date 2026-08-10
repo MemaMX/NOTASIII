@@ -86,6 +86,11 @@
       font-weight: 700;
       letter-spacing: 1px;
       color: var(--accent);
+      text-transform: uppercase;
+    }
+    .topbar-title-user {
+      font-weight: 500;
+      color: color-mix(in srgb, var(--accent) 75%, var(--text));
     }
     .topbar-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; position: relative; }
 
@@ -583,16 +588,23 @@
     }
 
     .search-line-highlight {
-      background-color: color-mix(in srgb, var(--accent) 15%, transparent);
+      background-color: color-mix(in srgb, var(--accent) 20%, transparent);
       border-left: 3px solid var(--accent);
       transition: background 0.3s ease;
     }
 
+    .search-line-highlight-inline {
+      display: inline;
+      padding-left: 6px;
+      box-decoration-break: clone;
+      -webkit-box-decoration-break: clone;
+    }
+
     input.search-input-highlight {
-      background-color: color-mix(in srgb, var(--accent) 15%, transparent) !important;
-      border-color: var(--accent) !important;
-      box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent) !important;
-      transition: all 0.3s ease;
+      background-color: transparent !important;
+      border-color: transparent !important;
+      box-shadow: none !important;
+      transition: none;
     }
 
     .modal-overlay {
@@ -1232,7 +1244,7 @@
 <div class="app-wrapper" id="appWrapper">
   <div id="header-fixed">
     <div class="topbar">
-      <span class="topbar-title">Notas</span>
+      <span class="topbar-title" id="topbarTitle">NOTAS <span class="topbar-title-user" id="topbarTitleUser"></span></span>
       <div class="topbar-right">
         <button class="accent-btn" id="accentBtn" title="Colores de interfaz" type="button"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="8" cy="10" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="10" r="1.5" fill="currentColor" stroke="none"/><path d="M12 19c-1.5 0-4-1.5-4-4 0-1 .5-2 2-2h4c1.5 0 2 1 2 2 0 2.5-2.5 4-4 4z"/></svg></button>
         <!-- From Uiverse.io by reglobby --> 
@@ -1720,8 +1732,10 @@ function deleteActiveUser() {
 
 function updateUserBtn() {
   const btn = document.getElementById('userBtn');
-  if (!btn) return;
   const user = users.find(u => u.id === activeUserId);
+  const titleUser = document.getElementById('topbarTitleUser');
+  if (titleUser) titleUser.textContent = user?.name ? '· ' + user.name.toUpperCase() : '';
+  if (!btn) return;
   if (user) { btn.title = 'Usuario: ' + user.name; btn.classList.add('user-btn-active'); }
   else { btn.title = 'Usuarios'; btn.classList.remove('user-btn-active'); }
 }
@@ -1870,7 +1884,6 @@ function renderAll() {
   renderPagesNav();
   renderDropdowns();
   updateHeaderScrollState();
-  refreshGlobalSearch();
 }
 
 function setupGlobalSearch() {
@@ -1886,6 +1899,10 @@ function refreshGlobalSearch() {
   applyGlobalSearch(input.value || '');
 }
 
+function getActiveGlobalSearchQuery() {
+  return document.getElementById('globalSearch')?.value.trim() || '';
+}
+
 function applyGlobalSearch(rawQuery) {
   const query = rawQuery.trim();
   clearSearchHighlights();
@@ -1896,18 +1913,18 @@ function applyGlobalSearch(rawQuery) {
     return;
   }
 
-  const firstInputMatch = findFirstDropdownTitleMatch(query);
-  const matchingDropdownIds = new Set(firstInputMatch ? [firstInputMatch.closest('.dropdown-wrap')?.dataset.id] : []);
-
-  document.querySelectorAll('.dd-title').forEach((input) => {
-    if ((input.value || '').toLowerCase().includes(query.toLowerCase())) {
-      input.classList.add('search-input-highlight');
-      const wrap = input.closest('.dropdown-wrap');
-      if (wrap?.dataset.id) matchingDropdownIds.add(wrap.dataset.id);
-    }
-  });
+  const normalizedQuery = query.toLowerCase();
+  const matchingDropdownIds = new Set();
   const regex = new RegExp(escapeRegExp(query), 'gi');
   let firstResult = null;
+  document.querySelectorAll('.dd-title').forEach((input) => {
+    if ((input.value || '').toLowerCase().includes(normalizedQuery)) {
+      const wrap = input.closest('.dropdown-wrap');
+      if (wrap?.dataset.id) matchingDropdownIds.add(wrap.dataset.id);
+      const lineTarget = highlightSearchLine(input.closest('.dd-trigger') || input) || input;
+      if (!firstResult) firstResult = lineTarget;
+    }
+  });
 
   getSearchRoots().forEach((root) => {
     collectSearchTextNodes(root).forEach((node) => {
@@ -1915,10 +1932,10 @@ function applyGlobalSearch(rawQuery) {
       regex.lastIndex = 0;
       const dropdownWrap = node.parentElement && node.parentElement.closest('.dropdown-wrap');
       if (dropdownWrap?.dataset.id) matchingDropdownIds.add(dropdownWrap.dataset.id);
-      const firstMark = highlightTextNode(node, regex);
-      if (firstMark) {
-        highlightSearchLine(firstMark);
-        if (!firstResult) firstResult = firstMark;
+      const result = highlightTextNode(node, regex);
+      if (result?.firstMark) {
+        if (!result.lineHighlighted) highlightSearchLine(result.firstMark);
+        if (!firstResult) firstResult = result.target || result.firstMark;
       }
     });
   });
@@ -1931,10 +1948,9 @@ function applyGlobalSearch(rawQuery) {
     setDropdownOpenState(wrap, true);
   });
 
-  const target = firstResult || firstInputMatch;
-  if (target) {
+  if (firstResult) {
     requestAnimationFrame(() => {
-      target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+      firstResult.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
     });
   }
 }
@@ -1963,16 +1979,11 @@ function collectSearchTextNodes(root) {
   return nodes;
 }
 
-function highlightTextNode(node, regex) {
-  const text = node.textContent;
-  regex.lastIndex = 0;
-  if (!regex.test(text)) return null;
-  regex.lastIndex = 0;
-
+function buildHighlightedTextFragment(text, regex) {
   const fragment = document.createDocumentFragment();
   let lastIndex = 0;
   let firstMark = null;
-
+  regex.lastIndex = 0;
   text.replace(regex, (match, offset) => {
     if (offset > lastIndex) fragment.appendChild(document.createTextNode(text.slice(lastIndex, offset)));
     const mark = document.createElement('mark');
@@ -1983,15 +1994,67 @@ function highlightTextNode(node, regex) {
     lastIndex = offset + match.length;
     return match;
   });
-
   if (lastIndex < text.length) fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+  return { fragment, firstMark };
+}
+
+function highlightDirectNoteAreaTextNode(node, regex) {
+  const text = node.textContent;
+  const fragment = document.createDocumentFragment();
+  let firstMark = null;
+  text.split('\n').forEach((line, index, lines) => {
+    regex.lastIndex = 0;
+    if (regex.test(line)) {
+      const lineWrap = document.createElement('span');
+      lineWrap.className = 'search-line-highlight search-line-highlight-inline';
+      const highlighted = buildHighlightedTextFragment(line, regex);
+      lineWrap.appendChild(highlighted.fragment);
+      fragment.appendChild(lineWrap);
+      if (!firstMark) firstMark = highlighted.firstMark;
+    } else {
+      fragment.appendChild(document.createTextNode(line));
+    }
+    if (index < lines.length - 1) fragment.appendChild(document.createTextNode('\n'));
+  });
   node.parentNode.replaceChild(fragment, node);
-  return firstMark;
+  return firstMark ? {
+    firstMark,
+    lineHighlighted: true,
+    target: firstMark.closest('.search-line-highlight-inline') || firstMark
+  } : null;
+}
+
+function highlightTextNode(node, regex) {
+  const text = node.textContent;
+  regex.lastIndex = 0;
+  if (!regex.test(text)) return null;
+  regex.lastIndex = 0;
+
+  if (node.parentElement?.classList.contains('note-area')) {
+    return highlightDirectNoteAreaTextNode(node, regex);
+  }
+
+  const highlighted = buildHighlightedTextFragment(text, regex);
+  node.parentNode.replaceChild(highlighted.fragment, node);
+  return highlighted.firstMark ? {
+    firstMark: highlighted.firstMark,
+    lineHighlighted: false,
+    target: highlighted.firstMark
+  } : null;
 }
 
 function clearSearchHighlights() {
+  const parentsToNormalize = new Set();
   document.querySelectorAll('mark.search-highlight').forEach((mark) => {
+    if (mark.parentNode) parentsToNormalize.add(mark.parentNode);
     mark.replaceWith(document.createTextNode(mark.textContent));
+  });
+  document.querySelectorAll('.search-line-highlight-inline').forEach((el) => {
+    const parent = el.parentNode;
+    if (!parent) return;
+    parentsToNormalize.add(parent);
+    while (el.firstChild) parent.insertBefore(el.firstChild, el);
+    parent.removeChild(el);
   });
   document.querySelectorAll('.search-line-highlight').forEach((el) => {
     el.classList.remove('search-line-highlight');
@@ -1999,20 +2062,31 @@ function clearSearchHighlights() {
   document.querySelectorAll('input.search-input-highlight').forEach((el) => {
     el.classList.remove('search-input-highlight');
   });
+  parentsToNormalize.forEach((node) => node.normalize());
 }
 
-function highlightSearchLine(mark) {
-  const BLOCK_TAGS = new Set(['P','LI','DIV','SPAN','TD','TH','H1','H2','H3','H4','H5','H6','LABEL','SECTION','ARTICLE','BLOCKQUOTE','PRE']);
-  let el = mark.parentElement;
+function highlightSearchLine(target) {
+  if (!target) return null;
+  if (target.classList?.contains('search-line-highlight')) return target;
+  const BLOCK_TAGS = new Set(['P','LI','DIV','TD','TH','H1','H2','H3','H4','H5','H6','LABEL','SECTION','ARTICLE','BLOCKQUOTE','PRE']);
+  let el = target;
   while (el) {
-    if (BLOCK_TAGS.has(el.tagName) || el.classList.contains('cl-item') || el.classList.contains('dd-trigger')) {
+    if (
+      !el.classList?.contains('note-area') &&
+      !el.classList?.contains('dd-body') &&
+      !el.classList?.contains('dd-body-inner') &&
+      !el.classList?.contains('dd-list') &&
+      !el.classList?.contains('dropdown-wrap') &&
+      !el.classList?.contains('dropdown') &&
+      (BLOCK_TAGS.has(el.tagName) || el.classList.contains('cl-item') || el.classList.contains('dd-trigger'))
+    ) {
       el.classList.add('search-line-highlight');
-      return;
+      return el;
     }
     if (el.classList.contains('dropdown-wrap') || el.classList.contains('dd-body')) break;
     el = el.parentElement;
   }
-  if (mark.parentElement) mark.parentElement.classList.add('search-line-highlight');
+  return null;
 }
 
 function stripSearchHighlightsFromHtml(html) {
@@ -2289,6 +2363,7 @@ function renderDropdowns() {
   const page = pages[currentPage];
   if (!page || page.dropdowns.length === 0) {
     list.innerHTML = '<p class="no-dropdowns-msg" id="emptyMsg">No hay dropdowns. Presiona <b>+</b> para agregar uno.</p>';
+    if (getActiveGlobalSearchQuery()) requestAnimationFrame(() => refreshGlobalSearch());
     return;
   }
   page.dropdowns.forEach((dd, i) => {
@@ -2296,6 +2371,7 @@ function renderDropdowns() {
     if (!Object.prototype.hasOwnProperty.call(dd, 'headerColor')) dd.headerColor = undefined;
     list.appendChild(buildDropdownEl(dd, i));
   });
+  if (getActiveGlobalSearchQuery()) requestAnimationFrame(() => refreshGlobalSearch());
 }
 
 function buildDropdownEl(dd, index) {
