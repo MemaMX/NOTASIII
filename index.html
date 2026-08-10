@@ -16,6 +16,7 @@
       --accent-hover: rgb(24,94,82);
       --scrollbar-thumb: #555;
       --dot: #888;
+      --floating-ui-z: 6900;
     }
     :root[data-theme="light"] {
       --bg: #e8e8e8;
@@ -28,6 +29,7 @@
       --accent-hover: rgb(24,94,82);
       --scrollbar-thumb: #c1c2c5;
       --dot: #aaa;
+      --floating-ui-z: 6900;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -254,7 +256,7 @@
     }
     .font-menu-panel {
       position: fixed;
-      z-index: 3000;
+      z-index: var(--floating-ui-z);
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
@@ -729,7 +731,7 @@
     }
     .pages-overflow-panel {
       position: fixed;
-      z-index: 3000;
+      z-index: var(--floating-ui-z);
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
@@ -853,7 +855,7 @@
 
     .floating-popover {
       position: fixed;
-      z-index: 2000;
+      z-index: var(--floating-ui-z);
       min-width: 220px;
       background: var(--surface);
       border: 1px solid var(--border);
@@ -1303,7 +1305,7 @@
       <div class="toolbar-sep"></div>
       <label class="toolbar-color-wrap" title="Color de texto">
         <span>A</span>
-        <input type="color" id="textColorPicker" value="#000000" onchange="applyTextColor(this.value)" />
+        <input type="color" id="textColorPicker" value="#000000" oninput="applyTextColor(this.value)" onchange="applyTextColor(this.value)" />
       </label>
       <div class="toolbar-sep"></div>
       <button id="btnChecklist" onclick="toggleChecklistMode()" title="Modo checklist">Checklist</button>
@@ -1328,6 +1330,7 @@ let globalPopoverCleanup = null;
 let checklistActive = false;
 let fontMenuPanel = null;
 let currentFont = 'Segoe UI';
+let savedNoteSelection = null;
 const globalSearchOpenState = new Map();
 let fontMenuOutsideHandler = null;
 let pagesOverflowPanel = null;
@@ -2482,10 +2485,15 @@ function buildDropdownEl(dd, index) {
   noteArea.contentEditable = 'true';
   noteArea.spellcheck = true;
   noteArea.innerHTML = dd.content || '';
-  noteArea.addEventListener('focus', () => { activeNoteEl = noteArea; });
+  noteArea.addEventListener('focus', () => {
+    activeNoteEl = noteArea;
+    rememberActiveNoteSelection();
+  });
   noteArea.addEventListener('blur', () => { dd.content = stripSearchHighlightsFromHtml(noteArea.innerHTML); save(); });
   noteArea.addEventListener('input', () => { dd.content = stripSearchHighlightsFromHtml(noteArea.innerHTML); });
   noteArea.addEventListener('keydown', (e) => handlePipeRule(e, noteArea, dd));
+  noteArea.addEventListener('mouseup', rememberActiveNoteSelection);
+  noteArea.addEventListener('keyup', rememberActiveNoteSelection);
 
   const clOverlay = document.createElement('div');
   clOverlay.className = 'checklist-overlay';
@@ -2548,6 +2556,25 @@ function fmt(cmd) {
   if (activeNoteEl) activeNoteEl.focus();
   document.execCommand(cmd, false, null);
   if (activeNoteEl) save();
+}
+
+function rememberActiveNoteSelection() {
+  if (!activeNoteEl) return;
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  if (!activeNoteEl.contains(range.commonAncestorContainer)) return;
+  savedNoteSelection = range.cloneRange();
+}
+
+function restoreActiveNoteSelection() {
+  if (!activeNoteEl || !savedNoteSelection) return false;
+  if (!activeNoteEl.contains(savedNoteSelection.commonAncestorContainer)) return false;
+  const sel = window.getSelection();
+  if (!sel) return false;
+  sel.removeAllRanges();
+  sel.addRange(savedNoteSelection);
+  return true;
 }
 
 function buildFontMenu() {
@@ -2658,8 +2685,9 @@ function applyFontSize() {
 
 function applyTextColor(value) {
   if (!activeNoteEl) return;
-  activeNoteEl.focus();
+  restoreActiveNoteSelection();
   document.execCommand('foreColor', false, value);
+  rememberActiveNoteSelection();
   save();
 }
 
