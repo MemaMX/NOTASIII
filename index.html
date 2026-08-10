@@ -56,7 +56,7 @@
       flex-shrink: 0;
       position: sticky;
       top: 0;
-      z-index: 100;
+      z-index: 6000;
       background: var(--bg);
       transition: box-shadow 0.3s ease;
     }
@@ -558,7 +558,7 @@
       position: fixed;
       inset: 0;
       background: rgba(0,0,0,0);
-      z-index: 1000;
+      z-index: 7000;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -915,8 +915,8 @@
     }
     #userBalls {
       position: relative;
-      width: 420px;
-      height: 420px;
+      width: 480px;
+      height: 480px;
     }
 
     @keyframes floatBall {
@@ -932,14 +932,29 @@
       100% { transform: scale(1); }
     }
     @keyframes ballAppear {
-      from { opacity: 0; transform: scale(0.7) translateY(12px); }
+      from { opacity: 0; transform: scale(0) translateY(0); }
+      40%  { transform: scale(1.2) translateY(0); }
+      70%  { transform: scale(0.9) translateY(0); }
       to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes ballRemove {
+      from { opacity: 1; transform: scale(1); }
+      to   { opacity: 0; transform: scale(0); }
     }
 
     .user-ball-wrapper {
       position: absolute;
       transform: translate(-50%, -50%);
-      animation: floatBall 3.2s ease-in-out infinite, ballAppear 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+      animation: floatBall 3.2s ease-in-out infinite, ballAppear 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    .user-ball-wrapper.removing {
+      animation: ballRemove 0.4s ease-in forwards;
+      pointer-events: none;
+    }
+    /* Central ball: fixed, no float */
+    .user-ball-wrapper.center-ball {
+      animation: none;
+      z-index: 10;
     }
     .user-ball {
       width: 82px;
@@ -968,6 +983,11 @@
     .user-ball.user-ball-bounce {
       animation: ballBounce 0.55s ease forwards;
     }
+    /* Ring-specific ball sizes */
+    .user-ball.ball-ring-1 { width: 72px; height: 72px; }
+    .user-ball.ball-ring-2 { width: 62px; height: 62px; }
+    .user-ball.ball-ring-3 { width: 54px; height: 54px; }
+    .user-ball.ball-add    { width: 44px; height: 44px; background: var(--surface); border-style: dashed; }
     .user-ball-name {
       font-size: 11px;
       font-weight: 600;
@@ -1282,95 +1302,114 @@ function closeUserSelector() {
   setTimeout(() => { const b = document.getElementById('userBalls'); if (b) b.innerHTML = ''; }, 350);
 }
 
+function getBallPosition(index, containerSize) {
+  const cx = containerSize / 2;
+  const cy = containerSize / 2;
+  if (index < 6) {
+    const angle = (2 * Math.PI * index / 6) - Math.PI / 2;
+    return { x: cx + 90 * Math.cos(angle), y: cy + 90 * Math.sin(angle), ring: 1 };
+  } else if (index < 12) {
+    const i = index - 6;
+    const angle = (2 * Math.PI * i / 6) - Math.PI / 2 + Math.PI / 6;
+    return { x: cx + 160 * Math.cos(angle), y: cy + 160 * Math.sin(angle), ring: 2 };
+  } else {
+    const i = index - 12;
+    const n = 6;
+    const angle = (2 * Math.PI * i / n) - Math.PI / 2 + Math.PI / 12;
+    return { x: cx + 230 * Math.cos(angle), y: cy + 230 * Math.sin(angle), ring: 3 };
+  }
+}
+
 function renderUserBalls() {
   const container = document.getElementById('userBalls');
   container.innerHTML = '';
 
-  // Build list of all items: [currentPage ball, ...user balls, add ball]
-  const items = [];
+  const CONTAINER = 480;
+  const cx = CONTAINER / 2;
+  const cy = CONTAINER / 2;
 
-  // First ball: current active page (no name, always active)
-  items.push({ type: 'page' });
+  // Central ball: current page, always at center, fixed (no float)
+  const centerWrapper = document.createElement('div');
+  centerWrapper.className = 'user-ball-wrapper center-ball';
+  centerWrapper.style.left = cx + 'px';
+  centerWrapper.style.top = cy + 'px';
+  const centerBall = document.createElement('div');
+  centerBall.className = 'user-ball user-ball-active';
+  centerBall.title = pages[currentPage] ? pages[currentPage].name : 'Hoja actual';
+  centerWrapper.appendChild(centerBall);
+  container.appendChild(centerWrapper);
 
-  // User balls (capped so total stays ≤ 15)
-  const maxUsers = 14;
+  // User balls in rings 1-3
+  const maxUsers = 15;
   const visibleUsers = users.slice(0, maxUsers);
-  visibleUsers.forEach(user => items.push({ type: 'user', user }));
-
-  // "+" add ball only if under the cap
-  if (users.length < maxUsers) items.push({ type: 'add' });
-
-  const total = items.length;
-  const cx = 210, cy = 210;
-  const innerR = 110, outerR = 190;
-
-  items.forEach((item, i) => {
-    // Determine ring position
-    let x, y;
-    if (i < 6) {
-      const angle = (2 * Math.PI * i) / Math.min(6, total) - Math.PI / 2;
-      x = cx + innerR * Math.cos(angle);
-      y = cy + innerR * Math.sin(angle);
-    } else {
-      const outerIdx = i - 6;
-      const outerCount = Math.max(total - 6, 1);
-      const angle = (2 * Math.PI * outerIdx) / outerCount - Math.PI / 2;
-      x = cx + outerR * Math.cos(angle);
-      y = cy + outerR * Math.sin(angle);
-    }
-
+  visibleUsers.forEach((user, index) => {
+    const pos = getBallPosition(index, CONTAINER);
     const wrapper = document.createElement('div');
     wrapper.className = 'user-ball-wrapper';
-    wrapper.style.left = x + 'px';
-    wrapper.style.top = y + 'px';
-    wrapper.style.animationDelay = (i * 0.22) + 's';
+    wrapper.style.left = pos.x + 'px';
+    wrapper.style.top = pos.y + 'px';
+    wrapper.style.animationDelay = (index * 0.28 + 0.1) + 's';
+    wrapper.dataset.userId = user.id;
 
-    if (item.type === 'page') {
-      // First ball: current page representation
-      const ball = document.createElement('div');
-      ball.className = 'user-ball user-ball-active';
-      ball.title = pages[currentPage] ? pages[currentPage].name : 'Hoja actual';
-      wrapper.appendChild(ball);
+    const ball = document.createElement('div');
+    const ringClass = 'ball-ring-' + pos.ring;
+    ball.className = 'user-ball ' + ringClass + (user.id === activeUserId ? ' user-ball-active' : '');
+    ball.dataset.userId = user.id;
 
-    } else if (item.type === 'user') {
-      const user = item.user;
-      const ball = document.createElement('div');
-      ball.className = 'user-ball' + (user.id === activeUserId ? ' user-ball-active' : '');
-      ball.dataset.userId = user.id;
+    const nameEl = document.createElement('span');
+    nameEl.className = 'user-ball-name';
+    nameEl.textContent = user.name.slice(0, 9);
 
-      const nameEl = document.createElement('span');
-      nameEl.className = 'user-ball-name';
-      nameEl.textContent = user.name.slice(0, 9);
+    const editBtn = document.createElement('button');
+    editBtn.className = 'user-ball-edit-btn';
+    editBtn.title = 'Editar nombre';
+    editBtn.innerHTML = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 1.5 L10.5 3.5 L3.5 10.5 L1 11 L1.5 8.5 Z"/></svg>';
+    editBtn.addEventListener('click', (e) => { e.stopPropagation(); expandBallForEdit(ball, user); });
 
-      const editBtn = document.createElement('button');
-      editBtn.className = 'user-ball-edit-btn';
-      editBtn.title = 'Editar nombre';
-      editBtn.innerHTML = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 1.5 L10.5 3.5 L3.5 10.5 L1 11 L1.5 8.5 Z"/></svg>';
-      editBtn.addEventListener('click', (e) => { e.stopPropagation(); expandBallForEdit(ball, user); });
+    const delBtn = document.createElement('button');
+    delBtn.className = 'user-ball-del-btn';
+    delBtn.title = 'Eliminar perfil';
+    delBtn.textContent = '×';
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Animate out toward center before removing
+      const wEl = delBtn.closest('.user-ball-wrapper');
+      if (wEl) {
+        const fromX = parseFloat(wEl.style.left) - cx;
+        const fromY = parseFloat(wEl.style.top) - cy;
+        wEl.style.transition = 'left 0.35s ease, top 0.35s ease, opacity 0.35s ease, transform 0.35s ease';
+        wEl.style.left = cx + 'px';
+        wEl.style.top = cy + 'px';
+        wEl.style.opacity = '0';
+        wEl.style.transform = 'translate(-50%, -50%) scale(0)';
+        setTimeout(() => deleteUser(user.id), 370);
+      } else {
+        deleteUser(user.id);
+      }
+    });
 
-      const delBtn = document.createElement('button');
-      delBtn.className = 'user-ball-del-btn';
-      delBtn.title = 'Eliminar perfil';
-      delBtn.textContent = '×';
-      delBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteUser(user.id); });
-
-      ball.appendChild(nameEl);
-      ball.appendChild(editBtn);
-      ball.appendChild(delBtn);
-      ball.addEventListener('click', () => { if (!ball.classList.contains('user-ball-expanded')) selectUser(user.id, ball); });
-      wrapper.appendChild(ball);
-
-    } else if (item.type === 'add') {
-      const addBall = document.createElement('div');
-      addBall.className = 'user-ball user-ball-action';
-      addBall.title = 'Agregar usuario';
-      addBall.innerHTML = '<span class="user-ball-icon">+</span>';
-      addBall.addEventListener('click', () => { if (!addBall.classList.contains('user-ball-expanded')) expandBallForAdd(addBall); });
-      wrapper.appendChild(addBall);
-    }
-
+    ball.appendChild(nameEl);
+    ball.appendChild(editBtn);
+    ball.appendChild(delBtn);
+    ball.addEventListener('click', () => { if (!ball.classList.contains('user-ball-expanded')) selectUser(user.id, ball); });
+    wrapper.appendChild(ball);
     container.appendChild(wrapper);
   });
+
+  // "+" add button: just below the center ball, always visible if under cap
+  if (users.length < maxUsers) {
+    const addWrapper = document.createElement('div');
+    addWrapper.className = 'user-ball-wrapper center-ball';
+    addWrapper.style.left = cx + 'px';
+    addWrapper.style.top = (cy + 52) + 'px';
+    const addBall = document.createElement('div');
+    addBall.className = 'user-ball ball-add';
+    addBall.title = 'Agregar usuario';
+    addBall.innerHTML = '<span class="user-ball-icon" style="font-size:20px">+</span>';
+    addBall.addEventListener('click', () => { if (!addBall.classList.contains('user-ball-expanded')) expandBallForAdd(addBall); });
+    addWrapper.appendChild(addBall);
+    container.appendChild(addWrapper);
+  }
 }
 
 function buildBallEditUI(ballEl, inputVal, placeholder, onSave, onCancel) {
@@ -2533,6 +2572,7 @@ document.getElementById('themeToggle').addEventListener('change', function() {
 });
 
 function openNewPageModal() {
+  if (userSelectorOpen) closeUserSelector();
   document.getElementById('newPageModal').classList.add('active');
 }
 function closeNewPageModal() {
